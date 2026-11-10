@@ -1,7 +1,7 @@
 // Team Health Service — charter (P14), reassignments (P13), early-warning dashboard (Epic 3), public channels (P17).
 import "server-only";
 import { EARLY_WARNING } from "@/config/integrity-rules";
-import { authorize } from "../permissions";
+import { authorize, can } from "../permissions";
 import { charters, contributions, disputes, flags, memberships, projects, tasks, teams } from "../data/repo";
 import { inactiveMembers, isCharterComplete } from "../rules";
 import type { SessionUser } from "../types";
@@ -10,9 +10,9 @@ import { authorizeTeam, fullName, NotFoundError, UserError } from "./common";
 // ── Team charter (P14) ───────────────────────────────────────────────────────
 
 export async function getCharter(user: SessionUser | null, teamId: number) {
-  const { team } = await authorizeTeam(user, "team.read", teamId);
+  const { team, resource } = await authorizeTeam(user, "team.read", teamId);
   const [charter, members] = await Promise.all([charters.byTeam(teamId), memberships.byTeam(teamId)]);
-  return { team, charter, members, complete: !!charter?.completed_date };
+  return { team, charter, members, complete: !!charter?.completed_date, canWrite: can(user, "team.write", resource) };
 }
 
 async function refreshCharterCompletion(teamId: number) {
@@ -131,6 +131,30 @@ export async function teamSignals(user: SessionUser | null, projectId: number, a
 }
 
 // ── Student and viewer navigation, public channels (P17) ─────────────────────
+
+/** What the team channel header and tabs need; also the read check for every team page. */
+export async function teamHeader(user: SessionUser | null, teamId: number) {
+  const { team, resource } = await authorizeTeam(user, "team.read", teamId);
+  const member = resource.membership !== null && user!.role === "student";
+  return {
+    team,
+    tabs: {
+      tasks: member || can(user, "team.manage", resource),
+      charter: member || can(user, "team.manage", resource),
+      ratings: can(user, "evaluation.submit", resource),
+      feedback: can(user, "evaluation.readOwn", resource),
+      instructor: can(user, "team.manage", resource),
+    },
+    readOnlyReason:
+      team.visibility === "public"
+        ? "This channel is public and read-only. Evaluations are never shown here."
+        : team.channel_status === "finished"
+          ? "This channel is finished. You can read it, but new work can't be logged."
+          : !can(user, "team.write", resource) && member
+            ? "You have read-only access to this channel."
+            : null,
+  };
+}
 
 export async function myTeams(user: SessionUser | null) {
   if (!user || user.role !== "student") return [];

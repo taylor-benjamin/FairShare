@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+/* Design system tokens (Milestone 2 §4). Utilities: bg-primary, text-ink, border-line, text-hint, text-confirmed, text-disputed… */
+@theme {
+  --color-primary: #2563eb;
+  --color-primary-dark: #1d4ed8;
+  --color-primary-soft: #dbeafe;
+  --color-surface: #ffffff;
+  --color-ink: #1f2933;
+  --color-hint: #6b7480; /* mid tint of Text */
+  --color-line: #e3e6ea; /* light tint of Text: borders and dividers */
+  --color-wash: #f5f6f8; /* very light tint for page wells */
+  --color-confirmed: #15803d;
+  --color-confirmed-soft: #dcfce7;
+  --color-disputed: #dc2626;
+  --color-disputed-soft: #fee2e2;
+  --color-warning: #b45309;
+  --color-warning-soft: #fef3c7;
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+
+  /* Text styles: Heading 22/600, Body 16/400, Small 13/500 */
+  --text-heading: 22px;
+  --text-heading--line-height: 1.3;
+  --text-heading--font-weight: 600;
+  --text-body: 16px;
+  --text-body--line-height: 1.5;
+  --text-small: 13px;
+  --text-small--line-height: 1.4;
+  --text-small--font-weight: 500;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  line-height: 1.5;
+}
+
+/* Visible keyboard focus everywhere, in the Primary color. */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+@layer components {
+  .field-input {
+    @apply block w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-body text-ink placeholder:text-hint;
+    @apply focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20;
+  }
+  .field-input[aria-invalid="true"] {
+    @apply border-disputed focus:border-disputed focus:ring-disputed/20;
+  }
+  .section-label {
+    @apply text-small uppercase tracking-wide text-hint;
+  }
+  .card {
+    @apply rounded-xl border border-line bg-surface;
+  }
+  .link {
+    @apply font-semibold text-primary underline-offset-2 hover:underline;
+  }
+}

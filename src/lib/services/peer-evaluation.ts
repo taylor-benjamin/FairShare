@@ -98,7 +98,7 @@ export async function myFeedback(user: SessionUser | null, teamId: number) {
       evaluationId: r.evaluation_id,
       milestone: r.milestone_name,
       score: r.score,
-      comment: r.comment,
+      // Comments are written "for your instructor" (P12), so they never reach the person rated.
       from: anonymous ? null : `${r.evaluator_first} ${r.evaluator_last}`,
     })),
     myAverage: myAvg,
