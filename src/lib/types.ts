@@ -56,6 +56,7 @@ export interface ProjectRow {
   start_date: string;
   end_date: string;
   anonymous_evals: number | null;
+  member_access: AccessLevel | null; // migration 0002; NULL = template default
 }
 
 export interface MilestoneRow {
