@@ -1,0 +1,42 @@
+{
+  "name": "fairshare",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "npm run db:setup && next dev",
+    "dev:only": "next dev",
+    "build": "next build",
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy": "opennextjs-cloudflare build && wrangler d1 migrations apply DB --remote && opennextjs-cloudflare deploy",
+    "db:migrate": "wrangler d1 migrations apply DB --local",
+    "db:seed:generate": "tsx scripts/generate-seed.ts",
+    "db:seed": "npm run db:seed:generate && wrangler d1 execute DB --local --file=./db/seed.sql",
+    "db:setup": "node scripts/db-setup.mjs",
+    "db:reset": "node scripts/db-setup.mjs --reset",
+    "db:seed:remote": "npm run db:seed:generate && wrangler d1 execute DB --remote --file=./db/seed.sql",
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
+    "test": "vitest run",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@opennextjs/cloudflare": "^1.20.16",
+    "next": "^16.4.6",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.5",
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "tailwindcss": "^4.3.5",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "vitest": "^5.1.0",
+    "wrangler": "^4.160.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "workerd@1.20261110.1": true
+  }
+}

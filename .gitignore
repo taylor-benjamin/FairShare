@@ -1,0 +1,11 @@
+node_modules/
+.next/
+.open-next/
+.wrangler/
+out/
+*.tsbuildinfo
+next-env.d.ts
+.dev.vars
+.env*
+!.dev.vars.example
+db/seed.sql

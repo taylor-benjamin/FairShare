@@ -1,0 +1,6 @@
+# Copy to .dev.vars for local development. For production use `npx wrangler secret put <NAME>`.
+SESSION_SECRET=change-me-to-a-long-random-string-at-least-32-chars
+# Optional. When missing, emails (with their links) are printed to the terminal instead of sent.
+RESEND_API_KEY=
+# Optional. Base URL used in emailed links. Defaults to the request's own origin.
+APP_URL=http://localhost:3000

@@ -1,0 +1,24 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "fairshare",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "fairshare-db",
+      // Replace with the id printed by `npx wrangler d1 create fairshare-db` before deploying.
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "db/migrations"
+    }
+  ],
+  "vars": {
+    "EMAIL_FROM": "FairShare <onboarding@resend.dev>"
+  },
+  "observability": { "enabled": true }
+}
