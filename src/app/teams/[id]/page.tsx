@@ -2,7 +2,7 @@ import { handlePageError } from "@/components/access-denied";
 import { ContributionCard } from "@/components/contribution-card";
 import { ActionForm, SubmitButton } from "@/components/forms";
 import { EmptyState, Page } from "@/components/ui";
-import { studentMakePublicAction } from "@/app/actions/team";
+import { logTaskAction, studentMakePublicAction } from "@/app/actions/team";
 import { requireUser } from "@/lib/auth/session";
 import { getChannel } from "@/lib/services/contribution-service";
 import { LogTaskForm } from "./log-task-form";
@@ -28,7 +28,7 @@ export default async function TeamChannelPage({ params }: { params: Promise<{ id
       <div className={canWrite ? "grid gap-8 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]" : ""}>
         {canWrite && (
           <section aria-label="Log a completed task" className="md:sticky md:top-16 md:self-start">
-            <LogTaskForm teamId={teamId} tasks={myTasks} today={today} />
+            <LogTaskForm action={logTaskAction.bind(null, teamId)} tasks={myTasks} today={today} />
           </section>
         )}
 

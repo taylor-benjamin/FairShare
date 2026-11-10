@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AuthShell } from "@/components/auth-shell";
 import { Notice } from "@/components/ui";
 import { describeInvite } from "@/lib/services/auth-service";
+import { acceptInviteAction } from "@/app/actions/auth";
 import { AcceptInviteForm } from "./accept-form";
 
 export const metadata = { title: "Join your team" };
@@ -34,7 +35,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
       <p className="mb-4 text-small text-hint">
         You&apos;ll log the work you finish, confirm your teammates&apos; work, and rate each other at milestones. Ratings are private.
       </p>
-      <AcceptInviteForm token={token} email={info.email!} hasAccount={!!info.hasAccount} />
+      <AcceptInviteForm action={acceptInviteAction.bind(null, token)} email={info.email!} hasAccount={!!info.hasAccount} />
     </AuthShell>
   );
 }

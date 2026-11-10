@@ -1,11 +1,12 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { importRosterAction } from "@/app/actions/instructor";
+import type { ActionState } from "@/lib/action-state";
 import { SubmitButton } from "@/components/forms";
 
-export function RosterForm({ projectId }: { projectId: number }) {
-  const [state, action] = useActionState(importRosterAction.bind(null, projectId), {});
+/** `action` is bound on the server (importRosterAction.bind(null, projectId)). */
+export function RosterForm({ action: serverAction }: { action: (prev: ActionState, fd: FormData) => Promise<ActionState> }) {
+  const [state, action] = useActionState(serverAction, {});
   const [paste, setPaste] = useState(false);
   const problems = Object.values(state.fieldErrors ?? {});
   return (

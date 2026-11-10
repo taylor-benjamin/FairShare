@@ -3,6 +3,7 @@ import { Stepper } from "@/components/stepper";
 import { HeaderBar, Notice, Page } from "@/components/ui";
 import { requireUser } from "@/lib/auth/session";
 import { getSetupOverview } from "@/lib/services/class-setup";
+import { importRosterAction } from "@/app/actions/instructor";
 import { RosterForm } from "./roster-form";
 
 export const metadata = { title: "Upload class list" };
@@ -34,7 +35,7 @@ export default async function RosterPage({ params }: { params: Promise<{ id: str
             <Notice tone="warning">You already uploaded a list ({drafts} draft teams). Uploading again replaces the unpublished teams.</Notice>
           </div>
         )}
-        <RosterForm projectId={projectId} />
+        <RosterForm action={importRosterAction.bind(null, projectId)} />
       </Page>
     </>
   );

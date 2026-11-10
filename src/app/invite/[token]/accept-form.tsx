@@ -1,12 +1,13 @@
 "use client";
 
 import { useActionState } from "react";
-import { acceptInviteAction } from "@/app/actions/auth";
+import type { ActionState } from "@/lib/action-state";
 import { SubmitButton } from "@/components/forms";
 import { Field } from "@/components/ui";
 
-export function AcceptInviteForm({ token, email, hasAccount }: { token: string; email: string; hasAccount: boolean }) {
-  const [state, action] = useActionState(acceptInviteAction.bind(null, token), {});
+/** `action` is bound on the server (acceptInviteAction.bind(null, token)). */
+export function AcceptInviteForm({ action: serverAction, email, hasAccount }: { action: (prev: ActionState, fd: FormData) => Promise<ActionState>; email: string; hasAccount: boolean }) {
+  const [state, action] = useActionState(serverAction, {});
   const v = state.values ?? {};
   return (
     <form action={action} className="space-y-4" noValidate>

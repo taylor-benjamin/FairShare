@@ -1,13 +1,14 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { verifyAction } from "@/app/actions/team";
+import type { ActionState } from "@/lib/action-state";
 import { SubmitButton } from "./forms";
 import { Button } from "./ui";
 
 /** Confirm in one tap; Dispute opens a reason box (a reason is required). */
-export function VerifyControls({ contributionId, teamId }: { contributionId: number; teamId: number }) {
-  const [state, action] = useActionState(verifyAction.bind(null, contributionId, teamId), {});
+export function VerifyControls({ action: serverAction, contributionId }: { action: (prev: ActionState, fd: FormData) => Promise<ActionState>; contributionId: number }) {
+  // `action` is bound on the server (verifyAction.bind(null, contributionId, teamId)).
+  const [state, action] = useActionState(serverAction, {});
   const [disputing, setDisputing] = useState(false);
   const [reason, setReason] = useState("");
   const [tried, setTried] = useState(false);

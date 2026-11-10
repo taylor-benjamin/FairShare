@@ -1,13 +1,14 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
-import { logTaskAction } from "@/app/actions/team";
+import type { ActionState } from "@/lib/action-state";
 import { SubmitButton } from "@/components/forms";
 import { Field } from "@/components/ui";
 
 /** P09 — the under-a-minute log form. Only "What did you do?" is required; today's date is pre-filled. */
-export function LogTaskForm({ teamId, tasks, today }: { teamId: number; tasks: { task_id: number; task_title: string }[]; today: string }) {
-  const [state, action] = useActionState(logTaskAction.bind(null, teamId), {});
+export function LogTaskForm({ action: serverAction, tasks, today }: { action: (prev: ActionState, fd: FormData) => Promise<ActionState>; tasks: { task_id: number; task_title: string }[]; today: string }) {
+  // `action` is bound on the server (logTaskAction.bind(null, teamId)) so the team id can't be altered in the browser.
+  const [state, action] = useActionState(serverAction, {});
   const ref = useRef<HTMLFormElement>(null);
   const [taskId, setTaskId] = useState("");
   const fe = state.fieldErrors ?? {};

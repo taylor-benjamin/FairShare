@@ -1,6 +1,7 @@
 // Contribution card (Milestone 2 §4.3): colored left edge + status chip; pending / confirmed / disputed.
 import type { ReactNode } from "react";
 import { Chip, formatDate, formatHours } from "./ui";
+import { verifyAction } from "@/app/actions/team";
 import { VerifyControls } from "./verify-controls";
 
 export interface CardData {
@@ -52,7 +53,7 @@ export function ContributionCard({ c, footer }: { c: CardData; footer?: ReactNod
       )}
       {c.dispute_status === "rejected" && <p className="mt-0.5 text-small text-confirmed">Instructor reviewed the dispute and confirmed this entry.</p>}
       {c.dispute_status === "upheld" && <p className="mt-0.5 text-small text-hint">Instructor upheld the dispute; this entry doesn&apos;t count.</p>}
-      {c.canVerify && <VerifyControls contributionId={c.contribution_id} teamId={c.team_id} />}
+      {c.canVerify && <VerifyControls action={verifyAction.bind(null, c.contribution_id, c.team_id)} contributionId={c.contribution_id} />}
       {footer}
     </article>
   );
