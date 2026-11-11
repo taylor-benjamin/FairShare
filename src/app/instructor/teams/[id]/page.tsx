@@ -47,7 +47,7 @@ export default async function InstructorTeamPage({ params, searchParams }: { par
         </div>
 
         {signal?.needsAttention && (
-          <div className="mb-6 rounded-xl border border-primary/30 bg-primary-soft p-4">
+          <div className="mb-6 rounded-(--radius-card) border border-primary/20 bg-primary-tint p-4 sm:p-5">
             <p className="font-semibold text-primary">{signal.headline}</p>
             <ul className="mt-1 list-disc pl-5 text-small">
               {signal.reasons.map((r) => (
@@ -78,8 +78,8 @@ export default async function InstructorTeamPage({ params, searchParams }: { par
             </Field>
             <button className="rounded-lg border border-primary px-3 py-2.5 text-small font-semibold text-primary hover:bg-primary-soft">Recalculate</button>
           </form>
-          <div className="mt-4 overflow-x-auto rounded-xl border border-line">
-            <table className="w-full min-w-[640px] text-left text-small">
+          <div className="mt-4 card overflow-x-auto">
+            <table className="table-soft w-full min-w-[640px] text-left text-small">
               <thead className="bg-wash text-hint">
                 <tr>
                   <th className="px-3 py-2">Member</th>
@@ -131,7 +131,7 @@ export default async function InstructorTeamPage({ params, searchParams }: { par
                   {ratings.length === 0 ? (
                     <p className="text-small text-hint">No ratings submitted yet.</p>
                   ) : (
-                    <ul className="mt-2 divide-y divide-line rounded-xl border border-line text-small">
+                    <ul className="mt-2 card divide-y divide-line overflow-hidden text-small">
                       {ratings.map((r, i) => (
                         <li key={i} className="px-3 py-2">
                           <div className="flex justify-between">
@@ -187,7 +187,7 @@ export default async function InstructorTeamPage({ params, searchParams }: { par
             {history.length > 0 && (
               <ul className="mt-4 space-y-2">
                 {history.map((r) => (
-                  <li key={r.reassignment_id} className="rounded-lg bg-wash p-3 text-small">
+                  <li key={r.reassignment_id} className="rounded-xl bg-wash p-3.5 text-small">
                     <span className="font-semibold">{r.task_title}</span>: {r.from_name} → {r.to_name} · {formatDate(r.reassigned_date)}
                     <span className="block text-hint">{r.reassignment_reason}</span>
                   </li>

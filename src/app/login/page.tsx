@@ -20,7 +20,7 @@ export default async function LoginPage() {
     <AuthShell title="Log in" subtitle="Welcome back.">
       <LoginForm />
       {showDemo && (
-        <details className="mt-6 rounded-lg bg-wash p-3 text-small" open>
+        <details className="mt-6 rounded-xl bg-wash p-3.5 text-small" open>
           <summary className="cursor-pointer font-semibold">Demo accounts (password: FairShare2026!)</summary>
           <ul className="mt-2 space-y-1">
             {DEMO.map(([label, email]) => (

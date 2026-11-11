@@ -81,7 +81,7 @@ export default async function CharterPage({ params, searchParams }: { params: Pr
             <p className="section-label">Expectations</p>
             <p className="mt-1 whitespace-pre-line">{charter?.expectations ?? "Not written yet."}</p>
           </div>
-          <ul className="divide-y divide-line rounded-xl border border-line">
+          <ul className="card divide-y divide-line overflow-hidden">
             {members.map((m) => (
               <li key={m.user_id} className="flex items-center justify-between gap-2 px-4 py-3">
                 <span>

@@ -21,7 +21,7 @@ export function NewProjectForm({ templates, courses, defaults }: Props) {
       <fieldset className="space-y-2">
         <legend className="font-semibold">What kind of project are you running?</legend>
         {templates.map((t, i) => (
-          <label key={t.template_id} className="flex cursor-pointer items-start gap-3 rounded-xl border border-line p-4 has-checked:border-primary has-checked:bg-primary-soft">
+          <label key={t.template_id} className="flex cursor-pointer items-start gap-3 rounded-(--radius-card) border border-line bg-surface p-4 transition has-checked:border-primary has-checked:bg-primary-soft">
             <input type="radio" name="templateId" value={t.template_id} defaultChecked={v.templateId ? v.templateId === String(t.template_id) : i === 0} className="mt-1 accent-primary" />
             <span>
               <span className="font-semibold">{t.template_name}</span>

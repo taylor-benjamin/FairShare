@@ -70,7 +70,7 @@ export default async function ReviewsPage() {
                 <summary className="cursor-pointer text-small text-hint">Recently resolved ({disputes.resolved.length})</summary>
                 <ul className="mt-2 space-y-2 text-small">
                   {disputes.resolved.map((d) => (
-                    <li key={d.dispute_id} className="rounded-lg bg-wash p-3">
+                    <li key={d.dispute_id} className="rounded-xl bg-wash p-3.5">
                       <span className="font-semibold">{d.team_name}</span> · {d.author_name}: “{d.description}” —{" "}
                       <span className={d.dispute_status === "upheld" ? "text-disputed" : "text-confirmed"}>{d.dispute_status}</span>
                       {d.resolution_note && <span className="block text-hint">{d.resolution_note}</span>}
@@ -116,7 +116,7 @@ export default async function ReviewsPage() {
                 <summary className="cursor-pointer text-small text-hint">Recently reviewed ({flags.reviewed.length})</summary>
                 <ul className="mt-2 space-y-2 text-small">
                   {flags.reviewed.map((f) => (
-                    <li key={f.flag_id} className="rounded-lg bg-wash p-3">
+                    <li key={f.flag_id} className="rounded-xl bg-wash p-3.5">
                       {f.team_name}: {f.flag_details} — {f.review_status}
                     </li>
                   ))}

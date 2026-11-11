@@ -57,7 +57,7 @@ export default async function RosterPage({ params }: { params: Promise<{ id: str
           </div>
           {/* Scrolls sideways on narrow phones instead of squashing the example. */}
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[460px] text-left text-small">
+            <table className="table-soft w-full min-w-[460px] text-left text-small">
               <thead>
                 <tr>
                   {COLUMNS.map((c) => (

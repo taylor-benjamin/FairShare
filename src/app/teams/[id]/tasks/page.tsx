@@ -68,7 +68,7 @@ export default async function TasksPage({ params }: { params: Promise<{ id: stri
               <p className="section-label mb-3">Reassigned by your instructor</p>
               <ul className="space-y-2">
                 {history.map((r) => (
-                  <li key={r.reassignment_id} className="rounded-lg bg-wash p-3 text-small">
+                  <li key={r.reassignment_id} className="rounded-xl bg-wash p-3.5 text-small">
                     <span className="font-semibold">{r.task_title}</span>: {r.from_name} → {r.to_name} · {formatDate(r.reassigned_date)}
                     <span className="block text-hint">{r.reassignment_reason}</span>
                   </li>

@@ -6,8 +6,8 @@ import { usePathname } from "next/navigation";
 export function TeamTabs({ items }: { items: { href: string; label: string }[] }) {
   const path = usePathname();
   return (
-    <div className="sticky top-0 z-10 border-b border-line bg-surface/95 backdrop-blur">
-      <nav className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-2 sm:px-4" aria-label="Team channel sections">
+    <div className="mx-auto max-w-6xl px-4 pt-4 sm:px-6">
+      <nav className="pill-track max-w-full overflow-x-auto" aria-label="Team channel sections">
         {items.map((i) => {
           const active = path === i.href;
           return (
@@ -15,8 +15,9 @@ export function TeamTabs({ items }: { items: { href: string; label: string }[] }
               key={i.href}
               href={i.href}
               aria-current={active ? "page" : undefined}
-              className={`shrink-0 border-b-2 px-3 py-3 text-small ${active ? "border-accent font-semibold text-ink" : "border-transparent text-hint hover:text-ink"}`}
+              className="pill inline-flex items-center gap-1.5"
             >
+              {active && <span aria-hidden className="size-1.5 rounded-full bg-secondary" />}
               {i.label}
             </Link>
           );

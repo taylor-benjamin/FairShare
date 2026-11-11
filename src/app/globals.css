@@ -1,35 +1,70 @@
 @import "tailwindcss";
 
-/* Design system tokens (Milestone 2 §4). Utilities: bg-primary, text-ink, border-line, text-hint, text-confirmed, text-disputed… */
+/*
+ * FairShare "Fluid" theme.
+ * Primary = blue, Secondary = orange (from the logo).
+ * Soft cool-gray canvas, white rounded cards, pill controls, fluid type that scales with the viewport.
+ * Utilities: bg-primary, bg-secondary, text-ink, border-line, text-hint, text-confirmed, text-disputed…
+ */
 @theme {
+  /* Primary — blue */
   --color-primary: #2563eb;
   --color-primary-dark: #1d4ed8;
+  --color-primary-deep: #1e3a8a;
   --color-primary-soft: #dbeafe;
+  --color-primary-tint: #eff5ff;
+
+  /* Secondary — orange. Fills, bars, dots, highlights.
+     Use text-secondary-ink for orange text (#f97316 is too light to read on white). */
+  --color-secondary: #f97316;
+  --color-secondary-dark: #ea580c;
+  --color-secondary-ink: #c2410c;
+  --color-secondary-soft: #ffedd5;
+  --color-secondary-tint: #fff7ed;
+  /* Back-compat alias for existing `accent` utilities */
+  --color-accent: #f97316;
+  --color-accent-soft: #ffedd5;
+
+  /* Neutrals */
   --color-surface: #ffffff;
+  --color-canvas: #eef2f7; /* page background behind cards */
+  --color-wash: #f4f6fa; /* wells, table heads, track fills */
   --color-ink: #1f2933;
-  --color-hint: #6b7480; /* mid tint of Text */
-  --color-line: #e3e6ea; /* light tint of Text: borders and dividers */
-  --color-wash: #f5f6f8; /* very light tint for page wells */
+  --color-hint: #6b7480;
+  --color-line: #e5e9f0;
+
+  /* Status (never orange, so the brand color can't be mistaken for a warning) */
   --color-confirmed: #15803d;
   --color-confirmed-soft: #dcfce7;
   --color-disputed: #dc2626;
   --color-disputed-soft: #fee2e2;
-  --color-accent: #f97316; /* logo orange: brand accents only, never status or actions */
-  --color-accent-soft: #ffedd5;
   --color-warning: #b45309;
   --color-warning-soft: #fef3c7;
 
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
 
-  /* Text styles: Heading 22/600, Body 16/400, Small 13/500 */
-  --text-heading: 22px;
-  --text-heading--line-height: 1.3;
+  /* Fluid text: grows smoothly from phone (360px) to desktop (1280px) */
+  --text-display: clamp(28px, 1.4rem + 1.6vw, 40px);
+  --text-display--line-height: 1.1;
+  --text-display--font-weight: 600;
+  --text-display--letter-spacing: -0.02em;
+  --text-heading: clamp(20px, 1.05rem + 0.55vw, 26px);
+  --text-heading--line-height: 1.25;
   --text-heading--font-weight: 600;
-  --text-body: 16px;
+  --text-heading--letter-spacing: -0.01em;
+  --text-body: clamp(15px, 0.9rem + 0.15vw, 16px);
   --text-body--line-height: 1.5;
   --text-small: 13px;
   --text-small--line-height: 1.4;
   --text-small--font-weight: 500;
+
+  /* Shape & depth */
+  --radius-card: 1.25rem;
+  --radius-control: 0.75rem;
+  --shadow-soft: 0 1px 2px rgb(15 23 42 / 0.04), 0 4px 16px rgb(15 23 42 / 0.04);
+  --shadow-lift: 0 2px 4px rgb(15 23 42 / 0.05), 0 12px 32px rgb(37 99 235 / 0.1);
+
+  --ease-fluid: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 html {
@@ -37,11 +72,15 @@ html {
 }
 
 body {
-  background: var(--color-surface);
+  background: var(--color-canvas);
   color: var(--color-ink);
   font-family: var(--font-sans);
   font-size: var(--text-body);
   line-height: 1.5;
+}
+
+::selection {
+  background: var(--color-secondary-soft);
 }
 
 /* Visible keyboard focus everywhere, in the Primary color. */
@@ -51,20 +90,79 @@ body {
 }
 
 @layer components {
+  /* Cards: white, rounded, soft shadow; lift on hover when they're links */
+  .card {
+    @apply rounded-(--radius-card) border border-line/70 bg-surface shadow-(--shadow-soft);
+  }
+  a.card,
+  .card-hover {
+    @apply transition duration-300 ease-(--ease-fluid) hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-(--shadow-lift);
+  }
+  .card-muted {
+    @apply rounded-(--radius-card) bg-wash;
+  }
+
   .field-input {
-    @apply block w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-body text-ink placeholder:text-hint;
-    @apply focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20;
+    @apply block w-full rounded-(--radius-control) border border-line bg-surface px-3.5 py-2.5 text-body text-ink placeholder:text-hint;
+    @apply transition duration-200 ease-(--ease-fluid);
+    @apply hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/15 focus:outline-none;
   }
   .field-input[aria-invalid="true"] {
-    @apply border-disputed focus:border-disputed focus:ring-disputed/20;
+    @apply border-disputed focus:border-disputed focus:ring-disputed/15;
   }
+
   .section-label {
-    @apply text-small uppercase tracking-wide text-hint;
-  }
-  .card {
-    @apply rounded-xl border border-line bg-surface;
+    @apply text-small tracking-wide text-hint uppercase;
   }
   .link {
-    @apply font-semibold text-primary underline-offset-2 hover:underline;
+    @apply font-semibold text-primary underline-offset-4 transition-colors hover:text-primary-dark hover:underline;
+  }
+
+  /* Soft tinted square that holds an icon (stat tiles) */
+  .icon-tile {
+    @apply grid size-10 shrink-0 place-items-center rounded-xl;
+  }
+
+  /* Pill segmented control: <div class="pill-track"><a class="pill" aria-current="page"> */
+  .pill-track {
+    @apply inline-flex gap-1 rounded-full bg-wash p-1;
+  }
+  .pill {
+    @apply shrink-0 rounded-full px-4 py-1.5 text-small whitespace-nowrap text-hint transition duration-200 ease-(--ease-fluid) hover:text-ink;
+  }
+  .pill[aria-current="page"],
+  .pill[aria-selected="true"] {
+    @apply bg-surface font-semibold text-ink shadow-(--shadow-soft);
+  }
+
+  /* Progress bar: <div class="progress"><span style="width:60%"></span></div> */
+  .progress {
+    @apply h-2 w-full overflow-hidden rounded-full bg-wash;
+  }
+  .progress > span {
+    @apply block h-full rounded-full bg-primary transition-[width] duration-700 ease-(--ease-fluid);
+  }
+
+  /* Tables inside a card */
+  .table-soft thead {
+    @apply bg-wash text-hint;
+  }
+  .table-soft th {
+    @apply px-4 py-3 font-medium;
+  }
+  .table-soft td {
+    @apply px-4 py-3;
+  }
+  .table-soft tbody tr {
+    @apply transition-colors hover:bg-primary-tint/60;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
   }
 }

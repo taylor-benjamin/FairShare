@@ -43,7 +43,7 @@ export function RosterForm({ action: serverAction, backHref }: { action: (prev: 
         setMode(m);
         setLocalError(null);
       }}
-      className={`flex-1 rounded-md px-3 py-2 text-small transition ${mode === m ? "bg-surface text-primary shadow-sm" : "text-hint hover:text-ink"}`}
+      className={`flex-1 rounded-full px-3 py-2 text-small transition ${mode === m ? "bg-surface text-primary shadow-sm" : "text-hint hover:text-ink"}`}
     >
       {label}
     </button>
@@ -61,7 +61,7 @@ export function RosterForm({ action: serverAction, backHref }: { action: (prev: 
         }
       }}
     >
-      <div role="tablist" aria-label="How to add your class list" className="flex gap-1 rounded-lg bg-wash p-1">
+      <div role="tablist" aria-label="How to add your class list" className="flex gap-1 rounded-full bg-wash p-1">
         {tab("file", "Upload a file")}
         {tab("paste", "Paste the list")}
       </div>

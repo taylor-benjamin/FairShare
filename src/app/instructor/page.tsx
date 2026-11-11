@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowIcon, Chip, EmptyState, HeaderBar, LinkButton, Notice, Page } from "@/components/ui";
+import { ArrowIcon, Chip, EmptyState, HeaderBar, LinkButton, Notice, Page, Progress, StatTile } from "@/components/ui";
 import { requireUser } from "@/lib/auth/session";
 import { listMyProjects } from "@/lib/services/class-setup";
 import { disputeQueue } from "@/lib/services/contribution-service";
@@ -15,6 +15,9 @@ export default async function InstructorDashboard() {
   const withSignals = await Promise.all(projects.map(async (p) => ({ project: p, teams: await teamSignals(user, p.project_id) })));
   const attention = withSignals.flatMap((p) => p.teams.filter((t) => t.needsAttention));
   const reviewCount = disputes.open.length + flags.open.length;
+  const allTeams = withSignals.flatMap((p) => p.teams);
+  const liveTeams = allTeams.filter((t) => t.channelStatus !== "draft");
+  const onTrackPct = liveTeams.length ? Math.round(((liveTeams.length - attention.length) / liveTeams.length) * 100) : 0;
 
   return (
     <>
@@ -38,8 +41,23 @@ export default async function InstructorDashboard() {
           </div>
         ) : (
           <>
+            <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <StatTile label="Teams" value={allTeams.length} caption={`across ${projects.length} ${projects.length === 1 ? "project" : "projects"}`} tone="primary" icon={<UsersIcon />} />
+              <StatTile label="On track" value={`${onTrackPct}%`} caption={`${liveTeams.length - attention.length} of ${liveTeams.length} live teams`} tone="confirmed" icon={<CheckIcon />} />
+              <StatTile label="Need attention" value={attention.length} caption="quiet teams or open issues" tone="secondary" icon={<AlertIcon />} />
+              <StatTile label="To review" value={reviewCount} caption={`${disputes.open.length} ${disputes.open.length === 1 ? "dispute" : "disputes"} · ${flags.open.length} ${flags.open.length === 1 ? "flag" : "flags"}`} tone="disputed" icon={<FlagIcon />} href="/instructor/reviews" />
+            </div>
+            {liveTeams.length > 0 && (
+              <div className="card mb-6 p-4 sm:p-5">
+                <div className="mb-2 flex items-baseline justify-between gap-2">
+                  <p className="font-semibold">Class health</p>
+                  <p className="text-small text-hint">{onTrackPct}% of teams on track</p>
+                </div>
+                <Progress value={onTrackPct} tone="secondary" label="Share of teams on track" />
+              </div>
+            )}
             {reviewCount > 0 ? (
-              <Link href="/instructor/reviews" className="mb-6 block rounded-xl border border-primary/30 bg-primary-soft p-4 hover:border-primary">
+              <Link href="/instructor/reviews" className="mb-6 block rounded-(--radius-card) border border-primary/20 bg-primary-tint p-4 sm:p-5 hover:border-primary">
                 <p className="font-semibold text-primary">Needs your review</p>
                 <p className="text-small">
                   {disputes.open.length > 0 && `${disputes.open.length} disputed ${disputes.open.length === 1 ? "entry" : "entries"}`}
@@ -127,5 +145,38 @@ export default async function InstructorDashboard() {
         )}
       </Page>
     </>
+  );
+}
+
+const iconProps = { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round", className: "size-5", "aria-hidden": true } as const;
+function UsersIcon() {
+  return (
+    <svg {...iconProps}>
+      <circle cx="9" cy="8" r="3.5" />
+      <path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6M16 4.6a3.5 3.5 0 0 1 0 6.8M18.5 14.4c1.9.8 3 2.9 3 5.6" />
+    </svg>
+  );
+}
+function CheckIcon() {
+  return (
+    <svg {...iconProps}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="m8 12.5 2.5 2.5L16 9.5" />
+    </svg>
+  );
+}
+function AlertIcon() {
+  return (
+    <svg {...iconProps}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7.5v5M12 16.2v.1" />
+    </svg>
+  );
+}
+function FlagIcon() {
+  return (
+    <svg {...iconProps}>
+      <path d="M5 21V4M5 4h11l-2 4 2 4H5" />
+    </svg>
   );
 }
