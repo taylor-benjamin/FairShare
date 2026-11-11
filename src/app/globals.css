@@ -14,6 +14,8 @@
   --color-confirmed-soft: #dcfce7;
   --color-disputed: #dc2626;
   --color-disputed-soft: #fee2e2;
+  --color-accent: #f97316; /* logo orange: brand accents only, never status or actions */
+  --color-accent-soft: #ffedd5;
   --color-warning: #b45309;
   --color-warning-soft: #fef3c7;
 

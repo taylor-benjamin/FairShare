@@ -93,6 +93,7 @@ export function HeaderBar({
           )}
           <h1 className="truncate text-heading">{title}</h1>
           {subtitle && <p className="truncate text-small text-white/85">{subtitle}</p>}
+          <span aria-hidden className="mt-2 block h-1 w-10 rounded-full bg-accent" />
         </div>
         {right}
       </div>

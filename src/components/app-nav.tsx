@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LogoMark } from "./logo";
 import { logoutAction } from "@/app/actions/auth";
 import type { SessionUser } from "@/lib/types";
 
@@ -23,7 +24,7 @@ export function AppNav({ user }: { user: SessionUser }) {
     <nav className="border-b border-line bg-surface">
       <div className="mx-auto flex max-w-6xl items-center gap-x-4 gap-y-1 overflow-x-auto px-4 py-2 sm:px-6">
         <Link href="/" className="mr-1 flex shrink-0 items-center gap-1.5 font-semibold text-ink">
-          <span aria-hidden className="grid h-6 w-6 place-items-center rounded-md bg-primary text-small text-white">F</span>
+          <LogoMark size={26} className="rounded-md ring-1 ring-line" />
           FairShare
         </Link>
         <div className="flex shrink-0 items-center gap-3 text-small">

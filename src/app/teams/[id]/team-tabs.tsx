@@ -15,7 +15,7 @@ export function TeamTabs({ items }: { items: { href: string; label: string }[] }
               key={i.href}
               href={i.href}
               aria-current={active ? "page" : undefined}
-              className={`shrink-0 border-b-2 px-3 py-3 text-small ${active ? "border-primary text-primary" : "border-transparent text-hint hover:text-ink"}`}
+              className={`shrink-0 border-b-2 px-3 py-3 text-small ${active ? "border-accent font-semibold text-ink" : "border-transparent text-hint hover:text-ink"}`}
             >
               {i.label}
             </Link>
