@@ -85,7 +85,10 @@ export function HeaderBar({
         <div className="min-w-0">
           {back && (
             <Link href={back.href} className="mb-1 inline-block text-small text-white/85 hover:text-white">
-              ← {back.label}
+              <span className="inline-flex items-center gap-1">
+                <ArrowIcon direction="left" />
+                {back.label}
+              </span>
             </Link>
           )}
           <h1 className="truncate text-heading">{title}</h1>
@@ -94,6 +97,24 @@ export function HeaderBar({
         {right}
       </div>
     </header>
+  );
+}
+
+/** Soft, rounded arrow for navigation links. Sized to the surrounding text. */
+export function ArrowIcon({ direction = "right", className = "" }: { direction?: "left" | "right"; className?: string }) {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={`inline-block h-[1.1em] w-[1.1em] shrink-0 ${direction === "left" ? "rotate-180" : ""} ${className}`}
+    >
+      <path d="M5 12h14M13 6l6 6-6 6" />
+    </svg>
   );
 }
 

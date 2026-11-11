@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Chip, EmptyState, HeaderBar, LinkButton, Notice, Page } from "@/components/ui";
+import { ArrowIcon, Chip, EmptyState, HeaderBar, LinkButton, Notice, Page } from "@/components/ui";
 import { requireUser } from "@/lib/auth/session";
 import { listMyProjects } from "@/lib/services/class-setup";
 import { disputeQueue } from "@/lib/services/contribution-service";
@@ -44,7 +44,10 @@ export default async function InstructorDashboard() {
                 <p className="text-small">
                   {disputes.open.length > 0 && `${disputes.open.length} disputed ${disputes.open.length === 1 ? "entry" : "entries"}`}
                   {disputes.open.length > 0 && flags.open.length > 0 && " · "}
-                  {flags.open.length > 0 && `${flags.open.length} unusual rating ${flags.open.length === 1 ? "pattern" : "patterns"}`} → Review now
+                  {flags.open.length > 0 && `${flags.open.length} unusual rating ${flags.open.length === 1 ? "pattern" : "patterns"}`}{" "}
+                  <span className="inline-flex items-center gap-1 font-semibold text-primary">
+                    Review now <ArrowIcon />
+                  </span>
                 </p>
               </Link>
             ) : (
@@ -67,8 +70,8 @@ export default async function InstructorDashboard() {
                       {project.course_code} {project.course_name} · Section {project.section_number}
                     </p>
                   </div>
-                  <Link href={`/instructor/projects/${project.project_id}`} className="link text-small">
-                    Manage project →
+                  <Link href={`/instructor/projects/${project.project_id}`} className="link inline-flex items-center gap-1 text-small">
+                    Manage project <ArrowIcon />
                   </Link>
                 </div>
                 {teams.length === 0 ? (

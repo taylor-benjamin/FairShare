@@ -3,7 +3,7 @@ import { finishTeamAction, makePublicAction, reassignAction } from "@/app/action
 import { handlePageError } from "@/components/access-denied";
 import { ContributionCard } from "@/components/contribution-card";
 import { ActionForm, SubmitButton } from "@/components/forms";
-import { Chip, EmptyState, Field, formatDate, formatHours, HeaderBar, Notice, Page } from "@/components/ui";
+import { ArrowIcon, Chip, EmptyState, Field, formatDate, formatHours, HeaderBar, Notice, Page } from "@/components/ui";
 import { requireUser } from "@/lib/auth/session";
 import { getChannel } from "@/lib/services/contribution-service";
 import { teamResults } from "@/lib/services/peer-evaluation";
@@ -41,8 +41,8 @@ export default async function InstructorTeamPage({ params, searchParams }: { par
           <Chip tone={team.visibility === "public" ? "neutral" : team.channel_status === "published" ? "confirmed" : "pending"}>
             {team.visibility === "public" ? "Public, read-only" : team.channel_status === "published" ? "Active" : team.channel_status === "finished" ? "Finished" : "Draft"}
           </Chip>
-          <Link href={`/teams/${teamId}`} className="link text-small">
-            Open the channel as students see it →
+          <Link href={`/teams/${teamId}`} className="link inline-flex items-center gap-1 text-small">
+            Open the channel as students see it <ArrowIcon />
           </Link>
         </div>
 
