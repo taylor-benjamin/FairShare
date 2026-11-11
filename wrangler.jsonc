@@ -22,7 +22,7 @@
   "vars": {
     // Local dev overrides these from .dev.vars.
     "APP_URL": "https://fairshare.page",
-    "EMAIL_FROM": "FairShare <onboarding@resend.dev>"
+    "EMAIL_FROM": "FairShare <noreply@fairshare.page>"
   },
   "observability": { "enabled": true }
 }
