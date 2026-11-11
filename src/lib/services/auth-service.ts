@@ -1,9 +1,10 @@
-// Authentication service: sign-up, log-in, invite acceptance (P02, P08).
+// Authentication service: sign-up, log-in, password reset, invite acceptance (P02, P08).
 import "server-only";
-import { hashPassword, verifyPassword } from "../auth/crypto";
+import { hashPassword, passwordFingerprint, signResetToken, verifyPassword, verifyResetToken } from "../auth/crypto";
 import { endSession, startSession, toSessionUser } from "../auth/session";
 import { invitations, projects, users } from "../data/repo";
 import { sendEmail } from "../email";
+import { sessionSecret } from "../env";
 import type { SessionUser } from "../types";
 import { loadTeam, UserError } from "./common";
 
@@ -37,6 +38,52 @@ export async function logIn(email: string, password: string): Promise<SessionUse
 
 export async function logOut(): Promise<void> {
   await endSession();
+}
+
+// ── Forgot password ──────────────────────────────────────────────────────────
+
+/**
+ * Emails a one-hour, single-use reset link if the address has an account.
+ * Always finishes the same way, so the page never reveals whether an email is registered.
+ */
+export async function requestPasswordReset(emailRaw: string, appUrl: string): Promise<void> {
+  const email = emailRaw.trim().toLowerCase();
+  if (!EMAIL_RE.test(email) || email.length > 100) throw new UserError("Please enter the email address you log in with.");
+  const row = await users.byEmail(email);
+  if (!row) return;
+  const token = await signResetToken(row.user_id, row.password_hash, sessionSecret());
+  await sendEmail({
+    to: row.email,
+    subject: "Reset your FairShare password",
+    text:
+      `Hi ${row.first_name},\n\nSomeone (hopefully you) asked to reset your FairShare password. ` +
+      `Choose a new one here — the link works once and expires in 1 hour:\n${appUrl}/reset-password?token=${encodeURIComponent(token)}\n\n` +
+      `If you didn't ask for this, you can ignore this email; your password won't change.\n`,
+  });
+}
+
+async function userForResetToken(token: string) {
+  const claim = token ? await verifyResetToken(token, sessionSecret()) : null;
+  if (!claim) return null;
+  const row = await users.byId(claim.uid);
+  if (!row || (await passwordFingerprint(row.password_hash)) !== claim.fp) return null; // already used
+  return row;
+}
+
+export async function describeResetToken(token: string): Promise<{ valid: boolean; email?: string }> {
+  const row = await userForResetToken(token);
+  return row ? { valid: true, email: row.email } : { valid: false };
+}
+
+/** Sets the new password, which also invalidates the link, then signs the user in. */
+export async function resetPassword(token: string, password: string, confirm: string): Promise<SessionUser> {
+  const row = await userForResetToken(token);
+  if (!row) throw new UserError("This reset link has expired or was already used. Ask for a new one.");
+  checkPassword(password);
+  if (password !== confirm) throw new UserError("The two passwords don't match.");
+  await users.setPassword(row.user_id, await hashPassword(password));
+  await startSession(row.user_id);
+  return toSessionUser(row);
 }
 
 /**

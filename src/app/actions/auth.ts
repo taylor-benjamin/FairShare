@@ -2,9 +2,9 @@
 
 import { redirect } from "next/navigation";
 import { homeFor } from "@/lib/auth/session";
-import { acceptInvite, logIn, logOut, signUp } from "@/lib/services/auth-service";
+import { acceptInvite, logIn, logOut, requestPasswordReset, resetPassword, signUp } from "@/lib/services/auth-service";
 import type { ActionState } from "@/lib/action-state";
-import { appUrl, str, toActionError } from "./helpers";
+import { appUrl, attempt, str, toActionError } from "./helpers";
 
 export async function loginAction(_: ActionState, fd: FormData): Promise<ActionState> {
   const email = str(fd, "email", 100);
@@ -44,4 +44,24 @@ export async function acceptInviteAction(token: string, _: ActionState, fd: Form
     return { ...toActionError(e), values };
   }
   redirect(`/teams/${teamId}/charter?welcome=1`);
+}
+
+export async function forgotPasswordAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  const email = str(fd, "email", 100);
+  const result = await attempt(async () => {
+    await requestPasswordReset(email, await appUrl());
+    return "If that email has a FairShare account, a reset link is on its way. It expires in 1 hour — check your spam folder too.";
+  });
+  return { ...result, values: { email } };
+}
+
+export async function resetPasswordAction(token: string, _: ActionState, fd: FormData): Promise<ActionState> {
+  let home: string;
+  try {
+    const user = await resetPassword(token, String(fd.get("password") ?? ""), String(fd.get("confirm") ?? ""));
+    home = homeFor(user.role);
+  } catch (e) {
+    return toActionError(e);
+  }
+  redirect(home);
 }

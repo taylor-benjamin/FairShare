@@ -79,9 +79,43 @@ export async function verifySession(token: string, secret: string, nowSeconds = 
   }
   if (!ok) return null;
   try {
-    const payload = JSON.parse(new TextDecoder().decode(fromBase64Url(body))) as SessionPayload;
+    const payload = JSON.parse(new TextDecoder().decode(fromBase64Url(body))) as SessionPayload & { p?: unknown };
     if (typeof payload.uid !== "number" || typeof payload.exp !== "number" || payload.exp < nowSeconds) return null;
+    if (payload.p !== undefined) return null; // a purpose-tagged token (e.g. password reset) is never a session
     return payload;
+  } catch {
+    return null;
+  }
+}
+
+// ── Password-reset links ─────────────────────────────────────────────────────
+// Stateless: the token carries the user id, an expiry, and a fingerprint of the user's current
+// password hash. Changing the password changes the fingerprint, so each link works only once.
+
+export const RESET_TTL_SECONDS = 60 * 60; // 1 hour
+
+export async function passwordFingerprint(passwordHash: string): Promise<string> {
+  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", enc.encode(passwordHash)));
+  return toBase64Url(digest).slice(0, 22);
+}
+
+export async function signResetToken(uid: number, passwordHash: string, secret: string, nowSeconds = Math.floor(Date.now() / 1000)): Promise<string> {
+  const payload = { p: "reset", uid, exp: nowSeconds + RESET_TTL_SECONDS, fp: await passwordFingerprint(passwordHash) };
+  const body = toBase64Url(enc.encode(JSON.stringify(payload)));
+  const sig = new Uint8Array(await crypto.subtle.sign("HMAC", await hmacKey(secret), enc.encode(body)));
+  return `${body}.${toBase64Url(sig)}`;
+}
+
+/** Returns the user id and password fingerprint if the reset link is genuine and unexpired. */
+export async function verifyResetToken(token: string, secret: string, nowSeconds = Math.floor(Date.now() / 1000)): Promise<{ uid: number; fp: string } | null> {
+  const [body, sig] = token.split(".");
+  if (!body || !sig) return null;
+  try {
+    if (!(await crypto.subtle.verify("HMAC", await hmacKey(secret), fromBase64Url(sig) as BufferSource, enc.encode(body)))) return null;
+    const payload = JSON.parse(new TextDecoder().decode(fromBase64Url(body)));
+    if (payload.p !== "reset" || typeof payload.uid !== "number" || typeof payload.fp !== "string" || typeof payload.exp !== "number") return null;
+    if (payload.exp < nowSeconds) return null;
+    return { uid: payload.uid, fp: payload.fp };
   } catch {
     return null;
   }

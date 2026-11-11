@@ -13,9 +13,17 @@ export function LoginForm() {
       <Field label="Email" htmlFor="email">
         <input id="email" name="email" type="email" autoComplete="email" required defaultValue={state.values?.email} className="field-input" />
       </Field>
-      <Field label="Password" htmlFor="password">
+      <div className="space-y-1">
+        <div className="flex items-baseline justify-between gap-2">
+          <label htmlFor="password" className="block text-small text-ink">
+            Password
+          </label>
+          <Link href="/forgot-password" className="text-small font-semibold text-primary hover:underline">
+            Forgot password?
+          </Link>
+        </div>
         <input id="password" name="password" type="password" autoComplete="current-password" required className="field-input" />
-      </Field>
+      </div>
       {state.error && (
         <p className="text-small text-disputed" role="alert">
           {state.error}

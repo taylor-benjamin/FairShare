@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hashPassword, randomToken, signSession, verifyPassword, verifySession } from "@/lib/auth/crypto";
+import { hashPassword, passwordFingerprint, randomToken, signResetToken, signSession, verifyPassword, verifyResetToken, verifySession } from "@/lib/auth/crypto";
 
 describe("password hashing (PBKDF2-SHA256)", () => {
   it("verifies the right password and rejects the wrong one", async () => {
@@ -41,5 +41,32 @@ describe("session tokens", () => {
     const t = randomToken();
     expect(t.length).toBeLessThanOrEqual(64);
     expect(t).not.toBe(randomToken());
+  });
+});
+
+describe("password-reset tokens", () => {
+  const secret = "test-secret-test-secret-test-secret";
+  const hash = "pbkdf2_sha256$100000$salt$hash";
+
+  it("round-trips for an hour and carries the password fingerprint", async () => {
+    const now = 1_000_000_000;
+    const token = await signResetToken(7, hash, secret, now);
+    expect(await verifyResetToken(token, secret, now + 3599)).toEqual({ uid: 7, fp: await passwordFingerprint(hash) });
+    expect(await verifyResetToken(token, secret, now + 3601)).toBeNull();
+  });
+
+  it("is single-use: a new password changes the fingerprint", async () => {
+    expect(await passwordFingerprint(hash)).not.toBe(await passwordFingerprint(hash + "x"));
+  });
+
+  it("rejects a wrong secret, and can never be used as a session cookie", async () => {
+    const token = await signResetToken(7, hash, secret);
+    expect(await verifyResetToken(token, "another-secret-another-secret-xx")).toBeNull();
+    expect(await verifySession(token, secret)).toBeNull();
+  });
+
+  it("rejects a session cookie used as a reset link", async () => {
+    const session = await signSession({ uid: 7, exp: 2_000_000_000 }, secret);
+    expect(await verifyResetToken(session, secret, 1_000_000_000)).toBeNull();
   });
 });

@@ -29,6 +29,7 @@ export { now };
 export const users = {
   byId: (id: number) => first<UserRow>("SELECT * FROM users WHERE user_id = ?", id),
   byEmail: (email: string) => first<UserRow>("SELECT * FROM users WHERE email = ? COLLATE NOCASE", email.trim()),
+  setPassword: (userId: number, passwordHash: string) => run("UPDATE users SET password_hash = ? WHERE user_id = ?", passwordHash, userId),
   create: (u: { first_name: string; last_name: string; email: string; password_hash: string; system_role: SystemRole }) =>
     run(
       "INSERT INTO users (first_name, last_name, email, password_hash, system_role, created_date) VALUES (?, ?, ?, ?, ?, ?)",
