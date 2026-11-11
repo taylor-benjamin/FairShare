@@ -65,10 +65,23 @@ export function Chip({ tone = "neutral", children }: { tone?: ChipTone; children
 }
 
 /** Primary-colored header bar: title in Heading, subtitle in Small, both white. */
-export function HeaderBar({ title, subtitle, back, right }: { title: string; subtitle?: string; back?: { href: string; label: string }; right?: ReactNode }) {
+export function HeaderBar({
+  title,
+  subtitle,
+  back,
+  right,
+  narrow,
+}: {
+  title: string;
+  subtitle?: string;
+  back?: { href: string; label: string };
+  right?: ReactNode;
+  /** Match a <Page narrow> body so the title lines up with the content below it. */
+  narrow?: boolean;
+}) {
   return (
     <header className="bg-primary text-white">
-      <div className="mx-auto flex max-w-6xl items-start justify-between gap-3 px-4 py-4 sm:px-6">
+      <div className={`mx-auto flex ${narrow ? "max-w-2xl" : "max-w-6xl"} items-start justify-between gap-3 px-4 py-4 sm:px-6`}>
         <div className="min-w-0">
           {back && (
             <Link href={back.href} className="mb-1 inline-block text-small text-white/85 hover:text-white">

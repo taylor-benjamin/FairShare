@@ -36,7 +36,7 @@ export default async function SettingsPage({ params, searchParams }: { params: P
 
   return (
     <>
-      <HeaderBar title="Review the settings" subtitle={`${project.project_name} · ${project.course_code} Section ${project.section_number}`} back={{ href: `/instructor/projects/${projectId}`, label: "Project" }} />
+      <HeaderBar narrow title="Review the settings" subtitle={`${project.project_name} · ${project.course_code} Section ${project.section_number}`} back={{ href: `/instructor/projects/${projectId}`, label: "Project" }} />
       <Page narrow>
         <Stepper current={3} />
         {imported && (

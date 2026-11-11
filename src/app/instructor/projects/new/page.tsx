@@ -13,7 +13,7 @@ export default async function NewProjectPage() {
   const end = new Date(today.getTime() + 98 * 24 * 3600 * 1000);
   return (
     <>
-      <HeaderBar title="Set up a class project" subtitle="About ten minutes. You can change anything later." back={{ href: "/instructor", label: "Dashboard" }} />
+      <HeaderBar narrow title="Set up a class project" subtitle="About ten minutes. You can change anything later." back={{ href: "/instructor", label: "Dashboard" }} />
       <Page narrow>
         <Stepper current={1} />
         <NewProjectForm templates={templates} courses={courses} defaults={{ startDate: today.toISOString().slice(0, 10), endDate: end.toISOString().slice(0, 10) }} />
