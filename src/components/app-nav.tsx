@@ -27,7 +27,7 @@ export function AppNav({ user }: { user: SessionUser }) {
         <Link href="/" className="mr-1 flex shrink-0 items-center gap-2 font-semibold text-ink">
           <LogoMark size={30} className="rounded-lg ring-1 ring-line" />
           <span>
-            Fair<span className="text-secondary-ink">Share</span>
+            Fair<span className="text-secondary">Share</span>
           </span>
         </Link>
         <NavLinks links={linksFor(user.role)} />
