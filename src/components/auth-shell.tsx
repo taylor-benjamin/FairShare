@@ -10,7 +10,7 @@ export function AuthShell({ title, subtitle, children }: { title: string; subtit
             <span aria-hidden className="grid h-7 w-7 place-items-center rounded-md bg-white text-primary">F</span>
             FairShare
           </p>
-          <p className="mt-1 text-small text-white/85">Fair credit for team projects — logged, verified, and transparent.</p>
+          <p className="mt-1 text-small text-white/85">Teamwork, made Fair.</p>
         </div>
       </div>
       <main className="mx-auto -mt-2 max-w-md px-4 pb-10">
