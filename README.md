@@ -4,6 +4,8 @@ Peer evaluation and team contribution app — ISDS 4125, Team Tigers (Abby Hall,
 
 Instructors set up a private channel per team from a roster CSV. Students log the work they finish; teammates confirm or dispute each entry; disputes go to the instructor. At each completed milestone students rate teammates 1–5 (anonymously by default). The app flags suspicious rating patterns, warns the instructor about struggling teams, and shows a transparent contribution score. Finished channels can be made public, read-only.
 
+**Live:** https://fairshare.page (production database starts empty — sign up as an instructor, then invite students from a roster).
+
 **Stack:** Next.js 16 (App Router, TypeScript) on Cloudflare Workers via `@opennextjs/cloudflare` · Cloudflare D1 · Resend · Tailwind CSS 4 · Vitest.
 
 ---

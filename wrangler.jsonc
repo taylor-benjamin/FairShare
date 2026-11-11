@@ -12,12 +12,16 @@
     {
       "binding": "DB",
       "database_name": "fairshare-db",
-      // Replace with the id printed by `npx wrangler d1 create fairshare-db` before deploying.
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "539b432e-b9ff-474a-99e0-d745af8e05e2",
       "migrations_dir": "db/migrations"
     }
   ],
+  // Serve the app at the root of fairshare.page. Cloudflare creates the DNS record and certificate.
+  "routes": [{ "pattern": "fairshare.page", "custom_domain": true }],
+  "workers_dev": false,
   "vars": {
+    // Local dev overrides these from .dev.vars.
+    "APP_URL": "https://fairshare.page",
     "EMAIL_FROM": "FairShare <onboarding@resend.dev>"
   },
   "observability": { "enabled": true }
