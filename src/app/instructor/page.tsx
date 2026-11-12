@@ -9,7 +9,8 @@ import { teamSignals } from "@/lib/services/team-health";
 export const metadata = { title: "Dashboard" };
 
 /** Epic 3 — one card per team with plain-language "Needs your review" signals. */
-export default async function InstructorDashboard() {
+export default async function InstructorDashboard({ searchParams }: { searchParams: Promise<{ deleted?: string }> }) {
+  const { deleted } = await searchParams;
   const user = await requireUser(["instructor"]);
   const [projects, disputes, flags] = await Promise.all([listMyProjects(user), disputeQueue(user), flagQueue(user)]);
   const withSignals = await Promise.all(projects.map(async (p) => ({ project: p, teams: await teamSignals(user, p.project_id) })));
@@ -31,6 +32,11 @@ export default async function InstructorDashboard() {
         }
       />
       <Page>
+        {deleted === "project" && (
+          <div className="mb-6">
+            <Notice tone="success">The project and all of its teams were deleted.</Notice>
+          </div>
+        )}
         {projects.length === 0 ? (
           <div className="mx-auto max-w-lg text-center">
             <h2 className="text-heading">Set up your first class project</h2>

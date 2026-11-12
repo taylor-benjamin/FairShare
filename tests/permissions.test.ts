@@ -42,6 +42,16 @@ describe("instructor", () => {
     expect(can(linda, "evaluation.submit", team())).toBe(false);
   });
 
+  it("can delete only their own projects and teams, and unpublish their own public channels", () => {
+    const publicTeam = team({ channelStatus: "finished", visibility: "public" });
+    for (const action of ["project.delete", "team.delete", "team.unpublish"] as const) {
+      expect(can(linda, action, publicTeam)).toBe(true);
+      expect(can(otherProf, action, publicTeam)).toBe(false);
+    }
+    expect(can(linda, "project.delete", { kind: "course", instructorId: 1 })).toBe(true);
+    expect(can(otherProf, "project.delete", { kind: "course", instructorId: 1 })).toBe(false);
+  });
+
   it("can make a finished channel public, but not an unfinished one", () => {
     expect(can(linda, "team.makePublic", team({ channelStatus: "finished" }))).toBe(true);
     expect(can(linda, "team.makePublic", team({ channelStatus: "published" }))).toBe(false);
@@ -90,6 +100,11 @@ describe("student", () => {
     expect(can(marcus, "evaluation.submit", asMember("write", { channelStatus: "finished", visibility: "public" }))).toBe(false);
   });
 
+  it("can never delete projects or teams, or unpublish a channel — even their own", () => {
+    const own = asMember("write", { channelStatus: "finished", visibility: "public" });
+    for (const action of ["project.delete", "team.delete", "team.unpublish"] as const) expect(can(marcus, action, own)).toBe(false);
+  });
+
   it("can make their own finished channel public, not another team's", () => {
     expect(can(marcus, "team.makePublic", asMember("write", { channelStatus: "finished" }))).toBe(true);
     expect(can(marcus, "team.makePublic", team({ channelStatus: "finished" }))).toBe(false);
@@ -111,7 +126,7 @@ describe("viewer", () => {
 
   it("can never write, rate, or see evaluations — even on a public channel", () => {
     const publicTeam = team({ channelStatus: "finished", visibility: "public" });
-    for (const action of ["team.write", "evaluation.submit", "evaluation.readAll", "evaluation.readOwn", "team.makePublic", "course.create"] as const) {
+    for (const action of ["team.write", "evaluation.submit", "evaluation.readAll", "evaluation.readOwn", "team.makePublic", "course.create", "team.delete", "team.unpublish", "project.delete"] as const) {
       expect(can(viewer, action, publicTeam)).toBe(false);
     }
   });

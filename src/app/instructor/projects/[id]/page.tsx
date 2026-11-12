@@ -1,15 +1,17 @@
 import Link from "next/link";
-import { addMilestoneAction, completeMilestoneAction, publishAction } from "@/app/actions/instructor";
+import { addMilestoneAction, completeMilestoneAction, deleteProjectAction, publishAction } from "@/app/actions/instructor";
+import { DangerZone } from "@/components/danger-zone";
 import { handlePageError } from "@/components/access-denied";
 import { ActionForm, SubmitButton } from "@/components/forms";
 import { Stepper } from "@/components/stepper";
-import { Chip, EmptyState, Field, formatDate, HeaderBar, LinkButton, Page } from "@/components/ui";
+import { Chip, EmptyState, Field, formatDate, HeaderBar, LinkButton, Notice, Page } from "@/components/ui";
 import { requireUser } from "@/lib/auth/session";
 import { getSetupOverview } from "@/lib/services/class-setup";
 
 export const metadata = { title: "Project" };
 
-export default async function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ProjectPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ deleted?: string }> }) {
+  const { deleted } = await searchParams;
   const user = await requireUser(["instructor"]);
   const projectId = Number((await params).id);
   let data;
@@ -27,6 +29,11 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
     <>
       <HeaderBar title={project.project_name} subtitle={`${project.course_code} ${project.course_name} · Section ${project.section_number}`} back={{ href: "/instructor", label: "Dashboard" }} />
       <Page>
+        {deleted === "team" && (
+          <div className="mb-6">
+            <Notice tone="success">The team was deleted.</Notice>
+          </div>
+        )}
         {step <= 4 && (
           <div className="mx-auto max-w-2xl">
             <Stepper current={step} />
@@ -143,6 +150,19 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
             </ActionForm>
           </section>
         </div>
+        <section className="mt-12 border-t border-line pt-6">
+          <DangerZone
+            action={deleteProjectAction.bind(null, projectId)}
+            thing="project"
+            name={project.project_name}
+            consequences={[
+              `All ${teams.length} team ${teams.length === 1 ? "channel" : "channels"} in this project, including any public ones`,
+              "Every work log entry, confirmation, dispute, rating, comment and flag in those teams",
+              `The project's ${milestones.length} ${milestones.length === 1 ? "milestone" : "milestones"}, charters, tasks and invite links`,
+            ]}
+          />
+          <p className="mt-2 text-small text-hint">The course ({project.course_code} Section {project.section_number}) is kept so you can start a new project in it.</p>
+        </section>
       </Page>
     </>
   );

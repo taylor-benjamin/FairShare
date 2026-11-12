@@ -142,6 +142,7 @@ export const teams = {
     ),
   setStatus: (teamId: number, status: "published" | "finished") => run("UPDATE teams SET channel_status = ? WHERE team_id = ?", status, teamId),
   makePublic: (teamId: number) => run("UPDATE teams SET visibility = 'public' WHERE team_id = ? AND channel_status = 'finished'", teamId),
+  makePrivate: (teamId: number) => run("UPDATE teams SET visibility = 'private' WHERE team_id = ?", teamId),
 };
 
 export type MemberWithUser = MembershipRow & { first_name: string; last_name: string; email: string };
@@ -203,6 +204,45 @@ export async function createDraftTeams(projectId: number, roster: Map<string, { 
     }
   }
   await batch(statements);
+}
+
+/**
+ * Removes every row that belongs to the teams selected by `teamIds` (a subquery), children first,
+ * because the schema has no ON DELETE CASCADE. Callers wrap these in one batch so it's all-or-nothing.
+ * User accounts are kept — a student may be on other teams.
+ */
+function teamDeleteStatements(teamIds: string, params: unknown[]) {
+  const contribs = `SELECT contribution_id FROM contributions WHERE team_id IN (${teamIds})`;
+  return [
+    stmt(`DELETE FROM integrity_flags WHERE team_id IN (${teamIds})`, ...params),
+    stmt(`DELETE FROM evaluations WHERE team_id IN (${teamIds})`, ...params),
+    stmt(`DELETE FROM disputes WHERE verification_id IN (SELECT verification_id FROM verifications WHERE contribution_id IN (${contribs}))`, ...params),
+    stmt(`DELETE FROM verifications WHERE contribution_id IN (${contribs})`, ...params),
+    stmt(`DELETE FROM contributions WHERE team_id IN (${teamIds})`, ...params),
+    stmt(`DELETE FROM task_reassignments WHERE task_id IN (SELECT task_id FROM tasks WHERE team_id IN (${teamIds}))`, ...params),
+    stmt(`DELETE FROM tasks WHERE team_id IN (${teamIds})`, ...params),
+    stmt(`DELETE FROM team_charters WHERE team_id IN (${teamIds})`, ...params),
+    stmt(`DELETE FROM invitations WHERE team_id IN (${teamIds})`, ...params),
+    stmt(`DELETE FROM team_memberships WHERE team_id IN (${teamIds})`, ...params),
+    stmt(`DELETE FROM teams WHERE team_id IN (${teamIds})`, ...params),
+  ];
+}
+
+/** Permanently deletes one team channel and everything in it, in a single transaction. */
+export async function deleteTeam(teamId: number): Promise<void> {
+  await batch(teamDeleteStatements("?", [teamId]));
+}
+
+/** Permanently deletes a project: all its teams (as above), then its milestones and the project row. */
+export async function deleteProject(projectId: number): Promise<void> {
+  await batch([
+    ...teamDeleteStatements("SELECT team_id FROM teams WHERE project_id = ?", [projectId]),
+    // Flags/evaluations are tied to teams too, but clear any stragglers tied only to this project's milestones.
+    stmt("DELETE FROM integrity_flags WHERE milestone_id IN (SELECT milestone_id FROM milestones WHERE project_id = ?)", projectId),
+    stmt("DELETE FROM evaluations WHERE milestone_id IN (SELECT milestone_id FROM milestones WHERE project_id = ?)", projectId),
+    stmt("DELETE FROM milestones WHERE project_id = ?", projectId),
+    stmt("DELETE FROM projects WHERE project_id = ?", projectId),
+  ]);
 }
 
 export async function deleteDraftTeams(projectId: number): Promise<void> {

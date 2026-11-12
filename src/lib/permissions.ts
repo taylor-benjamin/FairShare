@@ -12,6 +12,9 @@ export type Action =
   | "flag.review"
   | "task.reassign"
   | "evaluation.readAll" // see every rating with evaluator names
+  | "project.delete" // permanently delete a project and all its teams
+  | "team.delete" // permanently delete one team channel and everything in it
+  | "team.unpublish" // take a public channel back to private
   // Team channel
   | "team.read" // see the activity feed, members, charter
   | "team.write" // log work, confirm/dispute, edit charter, add tasks
@@ -85,6 +88,9 @@ export function can(user: SessionUser | null, action: Action, resource: Resource
     case "flag.review":
     case "task.reassign":
     case "evaluation.readAll":
+    case "project.delete":
+    case "team.delete":
+    case "team.unpublish":
       return ownsResource(user, resource);
 
     case "team.read":

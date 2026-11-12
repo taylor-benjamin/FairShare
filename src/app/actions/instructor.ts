@@ -7,10 +7,13 @@ import {
   addMilestone,
   completeMilestone,
   createProject,
+  deleteProject,
+  deleteTeam,
   finishTeam,
   importRoster,
   publishTeams,
   saveSettings,
+  unpublishChannel,
 } from "@/lib/services/class-setup";
 import { resolveDispute } from "@/lib/services/contribution-service";
 import { reviewFlag } from "@/lib/services/peer-evaluation";
@@ -145,5 +148,38 @@ export async function reviewFlagAction(flagId: number, _: ActionState, fd: FormD
     await reviewFlag(await getCurrentUser(), flagId, status);
     revalidatePath("/instructor", "layout");
     return status === "confirmed" ? "Flag confirmed." : "Flag dismissed.";
+  });
+}
+
+// ── Deleting ─────────────────────────────────────────────────────────────────
+
+export async function deleteProjectAction(projectId: number, _: ActionState, fd: FormData): Promise<ActionState> {
+  try {
+    await deleteProject(await getCurrentUser(), projectId, str(fd, "confirmName", 100));
+  } catch (e) {
+    return toActionError(e);
+  }
+  revalidatePath("/instructor", "layout");
+  redirect("/instructor?deleted=project");
+}
+
+export async function deleteTeamAction(teamId: number, _: ActionState, fd: FormData): Promise<ActionState> {
+  let projectId: number;
+  try {
+    projectId = (await deleteTeam(await getCurrentUser(), teamId, str(fd, "confirmName", 100))).project_id;
+  } catch (e) {
+    return toActionError(e);
+  }
+  revalidatePath("/instructor", "layout");
+  revalidatePath("/public");
+  redirect(`/instructor/projects/${projectId}?deleted=team`);
+}
+
+export async function unpublishChannelAction(teamId: number, _: ActionState): Promise<ActionState> {
+  return attempt(async () => {
+    await unpublishChannel(await getCurrentUser(), teamId);
+    revalidatePath(`/instructor/teams/${teamId}`);
+    revalidatePath("/public");
+    return "Removed from public channels. The channel is private again; nothing was deleted.";
   });
 }

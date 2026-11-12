@@ -6,6 +6,8 @@ import {
   courses,
   createDraftTeams,
   deleteDraftTeams,
+  deleteProject as deleteProjectRows,
+  deleteTeam as deleteTeamRows,
   invitations,
   milestones,
   projects,
@@ -200,4 +202,38 @@ export async function finishTeam(user: SessionUser | null, teamId: number) {
   const { team } = await authorizeTeam(user, "team.manage", teamId);
   if (team.channel_status !== "published") throw new UserError("Only a published channel can be marked finished.");
   await teams.setStatus(teamId, "finished");
+}
+
+// ── Deleting (instructor only) ───────────────────────────────────────────────
+
+/** The typed confirmation must match the name exactly (ignoring surrounding spaces and case). */
+function confirmName(typed: string, actual: string) {
+  if (typed.trim().toLowerCase() !== actual.trim().toLowerCase()) {
+    throw new UserError(`To confirm, type the name exactly: ${actual}`);
+  }
+}
+
+/** Permanently deletes a project, its milestones, and every team channel in it. */
+export async function deleteProject(user: SessionUser | null, projectId: number, typedName: string) {
+  const project = Number.isInteger(projectId) ? await projects.byId(projectId) : null;
+  if (!project) throw new NotFoundError("That project doesn't exist.");
+  authorize(user, "project.delete", { kind: "course", instructorId: project.instructor_id });
+  confirmName(typedName, project.project_name);
+  await deleteProjectRows(projectId);
+  return project;
+}
+
+/** Permanently deletes one team channel and its work log, ratings, charter, tasks and invites. */
+export async function deleteTeam(user: SessionUser | null, teamId: number, typedName: string) {
+  const { team } = await authorizeTeam(user, "team.delete", teamId);
+  confirmName(typedName, team.team_name);
+  await deleteTeamRows(teamId);
+  return team;
+}
+
+/** Takes a public channel back to private. Nothing is deleted. */
+export async function unpublishChannel(user: SessionUser | null, teamId: number) {
+  const { team } = await authorizeTeam(user, "team.unpublish", teamId);
+  if (team.visibility !== "public") throw new UserError("This channel isn't public.");
+  await teams.makePrivate(teamId);
 }

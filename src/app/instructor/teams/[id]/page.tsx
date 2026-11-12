@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { finishTeamAction, makePublicAction, reassignAction } from "@/app/actions/instructor";
+import { deleteTeamAction, finishTeamAction, makePublicAction, reassignAction, unpublishChannelAction } from "@/app/actions/instructor";
+import { DangerZone } from "@/components/danger-zone";
 import { handlePageError } from "@/components/access-denied";
 import { ContributionCard } from "@/components/contribution-card";
 import { ActionForm, SubmitButton } from "@/components/forms";
@@ -231,8 +232,29 @@ export default async function InstructorTeamPage({ params, searchParams }: { par
           {team.visibility === "public" && (
             <div className="mt-3">
               <Notice>This channel is public and read-only. Anyone signed in can see the work log; evaluations stay private.</Notice>
+              <p className="mt-3 text-small text-hint">Take it out of the public list. The channel becomes private again; nothing is deleted.</p>
+              <ActionForm action={unpublishChannelAction.bind(null, teamId)} className="mt-2">
+                <SubmitButton variant="secondary" pendingText="Removing…">
+                  Remove from public channels
+                </SubmitButton>
+              </ActionForm>
             </div>
           )}
+
+          <div className="mt-8">
+            <DangerZone
+              action={deleteTeamAction.bind(null, teamId)}
+              thing="team"
+              name={team.team_name}
+              consequences={[
+                `The ${team.team_name} channel${team.visibility === "public" ? " (including its public page)" : ""}`,
+                `Its work log (${feed.length} ${feed.length === 1 ? "entry" : "entries"}), confirmations and disputes`,
+                "All peer ratings, comments and integrity flags for this team",
+                "Its charter, tasks, reassignment history and unused invite links",
+                `Team membership for ${members.length} ${members.length === 1 ? "student" : "students"}`,
+              ]}
+            />
+          </div>
         </section>
       </Page>
     </>

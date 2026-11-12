@@ -47,3 +47,10 @@ Choices made where the build spec or the Milestone 1/2 documents were silent, am
 26. **Server actions are bound in server components** (`action.bind(null, id)` passed as a prop). Binding inside client components made no-JS form posts on the team channel hang on re-render; binding on the server also encrypts the bound ids.
 27. **TypeScript 5.x pinned**: `npm install typescript` resolves to 7.x (the native compiler), which Next's build-time type check isn't verified against.
 28. **Out of scope** (not built, per spec §8): AI coach, third-party integrations, live LMS sync, non-education templates, native apps, SSO/E2E encryption, cross-project dashboards, payments, multi-step mediation.
+
+## Deleting (added after Milestone 2)
+
+29. **Instructors can permanently delete a project or a team, and take a public channel back to private.** Only the course's instructor can (`project.delete`, `team.delete`, `team.unpublish` in `can()`); students and viewers never can, even for their own team.
+30. **Deletes are explicit and all-or-nothing.** The schema has no `ON DELETE CASCADE`, so `repo.deleteTeam` / `repo.deleteProject` remove child rows in dependency order (flags, ratings, disputes, verifications, work log, reassignments, tasks, charter, invites, memberships, team; then milestones and the project) in one D1 batch.
+31. **What is kept:** user accounts (a student may be on other teams) and the course (so a new project can reuse it).
+32. **"Delete a public channel" = two options.** *Remove from public channels* makes it private and keeps everything; *Delete team* removes it entirely. The confirmation requires typing the exact name, and the server re-checks it.
