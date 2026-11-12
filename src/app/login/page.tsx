@@ -9,7 +9,6 @@ const DEMO = [
   ["Instructor", "linda.harris@fairshare.demo"],
   ["Student (Team Tigers lead)", "marcus.reed@fairshare.demo"],
   ["Student (Team Tigers)", "priya.shah@fairshare.demo"],
-  ["Viewer (read-only)", "viewer@fairshare.demo"],
 ];
 
 export default async function LoginPage() {

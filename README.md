@@ -2,7 +2,7 @@
 
 Peer evaluation and team contribution app — ISDS 4125, Team Tigers (Abby Hall, Isaac Morris, Rylie Richard, Sarah Jeffrey, Ben Taylor).
 
-Instructors set up a private channel per team from a roster CSV. Students log the work they finish; teammates confirm or dispute each entry; disputes go to the instructor. At each completed milestone students rate teammates 1–5 (anonymously by default). The app flags suspicious rating patterns, and warns the instructor about struggling teams. Finished channels can be made public, read-only.
+Instructors set up a private channel per team from a roster CSV. Students log the work they finish; teammates confirm or dispute each entry; disputes go to the instructor. At each completed milestone students rate teammates 1–5 (anonymously by default). The app flags suspicious rating patterns, and warns the instructor about struggling teams. Only instructors can sign up; students join through invite links.
 
 **Live:** https://fairshare.page (production database starts empty — sign up as an instructor, then invite students from a roster).
 
@@ -50,7 +50,7 @@ The seed (`scripts/generate-seed.ts`) computes dates relative to *now*, so "no w
 ### Tests
 
 ```bash
-npm test          # Vitest: permission check for every role, business rules, crypto, password reset (48 tests)
+npm test          # Vitest: permission check for every role, business rules, crypto, password reset (42 tests)
 npm run lint      # TypeScript type check
 ```
 
@@ -89,8 +89,7 @@ Every demo account uses the password **`FairShare2026!`**.
 | Student | `devon.brooks@fairshare.demo` | Team Tigers — Prototype (no work in 3+ weeks; gave everyone 5s) |
 | Student | `aaliyah.johnson@fairshare.demo` | Team Tigers — Presentation |
 | Student | `jordan.miller@fairshare.demo`, `alex.rivera@…`, `sam.chen@…`, `taylor.nguyen@…` | Team Pelicans (healthy; charter waiting on Taylor) |
-| Student | `chris.lopez@fairshare.demo`, `emma.davis@…`, `noah.patel@…`, `olivia.kim@…` | Team Magnolias (finished, public channel) |
-| Viewer | `viewer@fairshare.demo` | Read-only; sees public channels only |
+| Student | `chris.lopez@fairshare.demo`, `emma.davis@…`, `noah.patel@…`, `olivia.kim@…` | Team Magnolias (finished channel) |
 
 A ready-to-use invite link (Team Pelicans, not yet accepted): **`/invite/demo-invite-riley`**.
 
@@ -102,7 +101,7 @@ A ready-to-use invite link (Team Pelicans, not yet accepted): **`/invite/demo-in
 4. **Marcus** (narrow your browser to phone width) → Log & Verify: confirm Aaliyah's entry, log a task in under a minute.
 5. **Linda** → New project → upload `public/sample-roster.csv` → review settings → Publish. Invite links appear in the terminal; open one to join as a new student.
 6. **Linda** → Project → mark Milestone 2 complete; **Marcus** → Ratings → rate teammates.
-7. **Linda** → Team Pelicans → Finish channel → Make public; **viewer** sees it read-only.
+7. **Linda** → Team Pelicans → Finish channel; students can still read it but not log work.
 
 ---
 
@@ -135,7 +134,7 @@ Project layout:
 ```
 db/migrations/          D1 schema (16 tables, CHECKs, FKs, indexes)
 scripts/                generate-seed.ts, db-setup.mjs
-src/app/                routes: /login /signup /invite/[token] /instructor/** /teams/** /public
+src/app/                routes: /login /signup /invite/[token] /instructor/** /teams/**
 src/app/actions/        server actions (thin: parse form → call service → return message)
 src/components/         design-system components (Button, Field, Chip, HeaderBar, ContributionCard)
 src/config/             integrity and early-warning thresholds

@@ -27,7 +27,7 @@ export default async function MyTeamsPage() {
                       {t.project_name} · {t.course_code} Section {t.section_number}
                     </p>
                   </div>
-                  {t.visibility === "public" ? <Chip tone="neutral">Public</Chip> : t.channel_status === "finished" ? <Chip tone="pending">Finished</Chip> : <Chip tone="review">Active</Chip>}
+                  {t.channel_status === "finished" ? <Chip tone="pending">Finished</Chip> : <Chip tone="review">Active</Chip>}
                 </Link>
               </li>
             ))}

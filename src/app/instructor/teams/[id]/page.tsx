@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { deleteTeamAction, finishTeamAction, makePublicAction, reassignAction, unpublishChannelAction } from "@/app/actions/instructor";
+import { deleteTeamAction, finishTeamAction, reassignAction } from "@/app/actions/instructor";
 import { DangerZone } from "@/components/danger-zone";
 import { handlePageError } from "@/components/access-denied";
 import { ContributionCard } from "@/components/contribution-card";
 import { ActionForm, SubmitButton } from "@/components/forms";
-import { ArrowIcon, Chip, EmptyState, Field, formatDate, HeaderBar, Notice, Page } from "@/components/ui";
+import { ArrowIcon, Chip, EmptyState, Field, formatDate, HeaderBar, Page } from "@/components/ui";
 import { requireUser } from "@/lib/auth/session";
 import { getChannel } from "@/lib/services/contribution-service";
 import { teamRatings } from "@/lib/services/peer-evaluation";
@@ -38,8 +38,8 @@ export default async function InstructorTeamPage({ params }: { params: Promise<{
       />
       <Page>
         <div className="mb-6 flex flex-wrap items-center gap-2">
-          <Chip tone={team.visibility === "public" ? "neutral" : team.channel_status === "published" ? "confirmed" : "pending"}>
-            {team.visibility === "public" ? "Public, read-only" : team.channel_status === "published" ? "Active" : team.channel_status === "finished" ? "Finished" : "Draft"}
+          <Chip tone={team.channel_status === "published" ? "confirmed" : "pending"}>
+            {team.channel_status === "published" ? "Active" : team.channel_status === "finished" ? "Finished" : "Draft"}
           </Chip>
           <Link href={`/teams/${teamId}`} className="link inline-flex items-center gap-1 text-small">
             Open the channel as students see it <ArrowIcon />
@@ -171,27 +171,6 @@ export default async function InstructorTeamPage({ params }: { params: Promise<{
               </ActionForm>
             </div>
           )}
-          {team.channel_status === "finished" && team.visibility === "private" && (
-            <div className="mt-3">
-              <p className="text-small text-hint">Share the finished work log with your whole school, read-only. Ratings, comments, and scores are never shown.</p>
-              <ActionForm action={makePublicAction.bind(null, teamId)} className="mt-2">
-                <SubmitButton variant="secondary" pendingText="Sharing…">
-                  Make channel public
-                </SubmitButton>
-              </ActionForm>
-            </div>
-          )}
-          {team.visibility === "public" && (
-            <div className="mt-3">
-              <Notice>This channel is public and read-only. Anyone signed in can see the work log; evaluations stay private.</Notice>
-              <p className="mt-3 text-small text-hint">Take it out of the public list. The channel becomes private again; nothing is deleted.</p>
-              <ActionForm action={unpublishChannelAction.bind(null, teamId)} className="mt-2">
-                <SubmitButton variant="secondary" pendingText="Removing…">
-                  Make private
-                </SubmitButton>
-              </ActionForm>
-            </div>
-          )}
 
           <div className="mt-8">
             <DangerZone
@@ -199,7 +178,7 @@ export default async function InstructorTeamPage({ params }: { params: Promise<{
               thing="team"
               name={team.team_name}
               consequences={[
-                `The ${team.team_name} channel${team.visibility === "public" ? " (including its public page)" : ""}`,
+                `The ${team.team_name} channel`,
                 `Its work log (${feed.length} ${feed.length === 1 ? "entry" : "entries"}), confirmations and disputes`,
                 "All peer ratings, comments and integrity flags for this team",
                 "Its charter, tasks, reassignment history and unused invite links",

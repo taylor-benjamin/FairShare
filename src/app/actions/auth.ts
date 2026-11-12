@@ -19,10 +19,10 @@ export async function loginAction(_: ActionState, fd: FormData): Promise<ActionS
 }
 
 export async function signupAction(_: ActionState, fd: FormData): Promise<ActionState> {
-  const values = { firstName: str(fd, "firstName", 50), lastName: str(fd, "lastName", 50), email: str(fd, "email", 100), role: str(fd, "role", 20) };
+  const values = { firstName: str(fd, "firstName", 50), lastName: str(fd, "lastName", 50), email: str(fd, "email", 100) };
   let home: string;
   try {
-    const user = await signUp({ ...values, password: String(fd.get("password") ?? ""), role: values.role as "instructor" | "viewer", appUrl: await appUrl() });
+    const user = await signUp({ ...values, password: String(fd.get("password") ?? ""), appUrl: await appUrl() });
     home = homeFor(user.role);
   } catch (e) {
     return { ...toActionError(e), values };

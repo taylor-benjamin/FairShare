@@ -32,6 +32,9 @@ export async function logIn(email: string, password: string): Promise<SessionUse
   if (!(await verifyPassword(password, row.password_hash))) {
     throw new UserError("That email and password don't match an account.");
   }
+  if (row.system_role !== "instructor" && row.system_role !== "student") {
+    throw new UserError("This account type is no longer supported. Ask your instructor for a team invite.");
+  }
   await startSession(row.user_id);
   return toSessionUser(row);
 }
@@ -87,15 +90,14 @@ export async function resetPassword(token: string, password: string, confirm: st
 }
 
 /**
- * Open sign-up is for instructors and viewers. Students join through the invite link their
+ * Open sign-up is for instructors only. Students join through the invite link their
  * instructor's roster sends, so they land in the right team automatically.
  */
-export async function signUp(input: { firstName: string; lastName: string; email: string; password: string; role: "instructor" | "viewer"; appUrl: string }): Promise<SessionUser> {
+export async function signUp(input: { firstName: string; lastName: string; email: string; password: string; appUrl: string }): Promise<SessionUser> {
   const email = input.email.trim().toLowerCase();
   checkName(input.firstName, input.lastName);
   if (!EMAIL_RE.test(email) || email.length > 100) throw new UserError("Please enter a valid email address.");
   checkPassword(input.password);
-  if (input.role !== "instructor" && input.role !== "viewer") throw new UserError("Pick an account type.");
   if (await users.byEmail(email)) throw new UserError("An account with that email already exists. Try logging in instead.");
 
   const id = await users.create({
@@ -103,16 +105,14 @@ export async function signUp(input: { firstName: string; lastName: string; email
     last_name: input.lastName,
     email,
     password_hash: await hashPassword(input.password),
-    system_role: input.role,
+    system_role: "instructor",
   });
   await sendEmail({
     to: email,
     subject: "Welcome to FairShare",
     text:
-      `Hi ${input.firstName},\n\nYour FairShare ${input.role} account is ready. Log in any time at ${input.appUrl}/login\n\n` +
-      (input.role === "instructor"
-        ? "To start, click “Set up a class project”. It takes about ten minutes with your class list from Moodle.\n"
-        : "You can browse every team channel that has been shared publicly.\n"),
+      `Hi ${input.firstName},\n\nYour FairShare instructor account is ready. Log in any time at ${input.appUrl}/login\n\n` +
+      "To start, click “New project”. It takes about ten minutes with your class list from Moodle.\n",
   });
   await startSession(id);
   const row = await users.byId(id);
@@ -157,8 +157,8 @@ export async function acceptInvite(token: string, input: { firstName: string; la
   if (user) {
     if (user.system_role === "instructor") throw new UserError("This email belongs to an instructor account. Ask your instructor to use a different email.");
     if (!(await verifyPassword(input.password, user.password_hash))) throw new UserError("That password doesn't match your existing FairShare account.");
-    // A viewer who signed up on their own becomes a student when they accept a team invite.
-    if (user.system_role === "viewer") await users.setRole(user.user_id, "student");
+    // Any older non-student account (e.g. a former "viewer") becomes a student when it accepts a team invite.
+    if (user.system_role !== "student") await users.setRole(user.user_id, "student");
   } else {
     checkName(input.firstName, input.lastName);
     checkPassword(input.password);

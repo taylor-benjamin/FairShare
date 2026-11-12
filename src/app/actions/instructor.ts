@@ -14,11 +14,10 @@ import {
   publishTeams,
   resendInvitation,
   saveSettings,
-  unpublishChannel,
 } from "@/lib/services/class-setup";
 import { resolveDispute } from "@/lib/services/contribution-service";
 import { reviewFlag } from "@/lib/services/peer-evaluation";
-import { makeChannelPublic, reassignTask } from "@/lib/services/team-health";
+import { reassignTask } from "@/lib/services/team-health";
 import { UserError } from "@/lib/services/common";
 import type { ActionState } from "@/lib/action-state";
 import { appUrl, attempt, int, str, toActionError } from "./helpers";
@@ -116,14 +115,6 @@ export async function finishTeamAction(teamId: number, _: ActionState): Promise<
   });
 }
 
-export async function makePublicAction(teamId: number, _: ActionState): Promise<ActionState> {
-  return attempt(async () => {
-    await makeChannelPublic(await getCurrentUser(), teamId);
-    revalidatePath(`/instructor/teams/${teamId}`);
-    revalidatePath(`/teams/${teamId}`);
-    return "Channel is public.";
-  });
-}
 
 export async function reassignAction(teamId: number, _: ActionState, fd: FormData): Promise<ActionState> {
   return attempt(async () => {
@@ -174,18 +165,9 @@ export async function deleteTeamAction(teamId: number, _: ActionState, fd: FormD
     return toActionError(e);
   }
   revalidatePath("/instructor", "layout");
-  revalidatePath("/public");
   redirect(`/instructor/projects/${projectId}?deleted=team`);
 }
 
-export async function unpublishChannelAction(teamId: number, _: ActionState): Promise<ActionState> {
-  return attempt(async () => {
-    await unpublishChannel(await getCurrentUser(), teamId);
-    revalidatePath(`/instructor/teams/${teamId}`);
-    revalidatePath("/public");
-    return "Channel is private.";
-  });
-}
 
 export async function resendInviteAction(invitationId: number, projectId: number, _: ActionState): Promise<ActionState> {
   return attempt(async () => {

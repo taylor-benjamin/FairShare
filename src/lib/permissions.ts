@@ -1,7 +1,7 @@
 // P04 — the single permission check. Every service calls authorize() (which calls can())
 // before it reads or writes anything. can() is pure so it can be unit-tested for every role.
 
-import type { AccessLevel, ChannelStatus, SessionUser, Visibility } from "./types";
+import type { AccessLevel, ChannelStatus, SessionUser } from "./types";
 
 export type Action =
   // Instructor-only setup and oversight
@@ -14,15 +14,11 @@ export type Action =
   | "evaluation.readAll" // see every rating with evaluator names
   | "project.delete" // permanently delete a project and all its teams
   | "team.delete" // permanently delete one team channel and everything in it
-  | "team.unpublish" // take a public channel back to private
   // Team channel
   | "team.read" // see the activity feed, members, charter
   | "team.write" // log work, confirm/dispute, edit charter, add tasks
-  | "team.makePublic"
   | "evaluation.submit"
-  | "evaluation.readOwn" // a student's own received ratings (names hidden if anonymous)
-  // Directory
-  | "publicChannels.list";
+  | "evaluation.readOwn"; // a student's own received ratings (names hidden if anonymous)
 
 /** Facts about a team the permission check needs. Loaded by the data layer, never trusted from the client. */
 export interface TeamResource {
@@ -30,7 +26,6 @@ export interface TeamResource {
   teamId: number;
   instructorId: number; // owner of the course the team belongs to
   channelStatus: ChannelStatus;
-  visibility: Visibility;
   /** The acting user's membership in this team, or null if they are not a member. */
   membership: { accessLevel: AccessLevel } | null;
 }
@@ -69,7 +64,6 @@ function canWriteTeam(user: SessionUser, resource: Resource): boolean {
   return (
     isStudentMember(user, resource) &&
     resource.membership!.accessLevel === "write" &&
-    resource.visibility === "private" && // public channels are read-only for everyone
     resource.channelStatus === "published" // draft channels have no members yet; finished ones are closed
   );
 }
@@ -90,36 +84,22 @@ export function can(user: SessionUser | null, action: Action, resource: Resource
     case "evaluation.readAll":
     case "project.delete":
     case "team.delete":
-    case "team.unpublish":
       return ownsResource(user, resource);
 
     case "team.read":
       if (resource.kind !== "team") return false;
       if (ownsResource(user, resource)) return true;
-      if (resource.visibility === "public") return true; // any signed-in account, including viewers
       return isStudentMember(user, resource) && resource.channelStatus !== "draft";
 
     case "team.write":
       return canWriteTeam(user, resource);
 
     case "evaluation.submit":
-      // Ratings are part of working in the channel; a finished-but-private channel may still collect final ratings.
-      return (
-        isStudentMember(user, resource) &&
-        resource.membership!.accessLevel === "write" &&
-        resource.visibility === "private" &&
-        resource.channelStatus !== "draft"
-      );
+      // Ratings are part of working in the channel; a finished channel may still collect final ratings.
+      return isStudentMember(user, resource) && resource.membership!.accessLevel === "write" && resource.channelStatus !== "draft";
 
     case "evaluation.readOwn":
       return isStudentMember(user, resource);
-
-    case "team.makePublic":
-      if (resource.kind !== "team" || resource.channelStatus !== "finished") return false;
-      return ownsResource(user, resource) || isStudentMember(user, resource);
-
-    case "publicChannels.list":
-      return true; // any signed-in account
 
     default: {
       const exhaustive: never = action;

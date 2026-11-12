@@ -33,7 +33,7 @@ export function LoginForm() {
         Log in
       </SubmitButton>
       <p className="text-center text-small text-hint">
-        New instructor or viewer?{" "}
+        New instructor?{" "}
         <Link href="/signup" className="link">
           Create an account
         </Link>
@@ -49,23 +49,6 @@ export function SignupForm() {
   const v = state.values ?? {};
   return (
     <form action={action} className="space-y-4" noValidate>
-      <fieldset className="space-y-2">
-        <legend className="text-small">I am…</legend>
-        <label className="flex items-start gap-3 rounded-lg border border-line p-3 has-checked:border-primary has-checked:bg-primary-soft">
-          <input type="radio" name="role" value="instructor" defaultChecked={v.role !== "viewer"} className="mt-1 accent-primary" />
-          <span>
-            <span className="font-semibold">An instructor</span>
-            <span className="block text-small text-hint">Set up team channels for a class and review results.</span>
-          </span>
-        </label>
-        <label className="flex items-start gap-3 rounded-lg border border-line p-3 has-checked:border-primary has-checked:bg-primary-soft">
-          <input type="radio" name="role" value="viewer" defaultChecked={v.role === "viewer"} className="mt-1 accent-primary" />
-          <span>
-            <span className="font-semibold">A viewer</span>
-            <span className="block text-small text-hint">Read team channels that have been shared publicly. Read-only.</span>
-          </span>
-        </label>
-      </fieldset>
       <div className="grid grid-cols-2 gap-3">
         <Field label="First name" htmlFor="firstName">
           <input id="firstName" name="firstName" autoComplete="given-name" defaultValue={v.firstName} className="field-input" maxLength={50} />

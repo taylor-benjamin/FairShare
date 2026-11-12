@@ -38,7 +38,8 @@ export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
   const payload = await verifySession(token, sessionSecret());
   if (!payload) return null;
   const row = await users.byId(payload.uid);
-  return row ? toSessionUser(row) : null;
+  // Only instructor and student accounts can sign in (the old "viewer" role was removed).
+  return row && (row.system_role === "instructor" || row.system_role === "student") ? toSessionUser(row) : null;
 });
 
 /** For pages: sends signed-out visitors to the login page and wrong roles to their home page. */
@@ -50,5 +51,5 @@ export async function requireUser(roles?: SystemRole[]): Promise<SessionUser> {
 }
 
 export function homeFor(role: SystemRole): string {
-  return role === "instructor" ? "/instructor" : role === "student" ? "/teams" : "/public";
+  return role === "instructor" ? "/instructor" : "/teams";
 }

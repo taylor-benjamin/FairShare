@@ -135,15 +135,7 @@ export const teams = {
        WHERE m.user_id = ? AND t.channel_status <> 'draft' ORDER BY t.creation_date DESC`,
       userId,
     ),
-  publicChannels: () =>
-    all<TeamContextRow>(
-      `SELECT t.*, c.instructor_id, c.course_id, c.course_code, c.course_name, c.section_number, p.project_name, p.anonymous_evals
-       FROM teams t JOIN projects p ON p.project_id = t.project_id JOIN courses c ON c.course_id = p.course_id
-       WHERE t.visibility = 'public' ORDER BY t.team_name`,
-    ),
   setStatus: (teamId: number, status: "published" | "finished") => run("UPDATE teams SET channel_status = ? WHERE team_id = ?", status, teamId),
-  makePublic: (teamId: number) => run("UPDATE teams SET visibility = 'public' WHERE team_id = ? AND channel_status = 'finished'", teamId),
-  makePrivate: (teamId: number) => run("UPDATE teams SET visibility = 'private' WHERE team_id = ?", teamId),
 };
 
 export type MemberWithUser = MembershipRow & { first_name: string; last_name: string; email: string };

@@ -10,14 +10,8 @@ const linksFor = (role: SessionUser["role"]) =>
         { href: "/instructor", label: "Dashboard" },
         { href: "/instructor/reviews", label: "Reviews" },
         { href: "/instructor/projects/new", label: "New project" },
-        { href: "/public", label: "Public channels" },
       ]
-    : role === "student"
-      ? [
-          { href: "/teams", label: "My teams" },
-          { href: "/public", label: "Public channels" },
-        ]
-      : [{ href: "/public", label: "Public channels" }];
+    : [{ href: "/teams", label: "My teams" }];
 
 /** Thin top navigation shared by every signed-in page. */
 export function AppNav({ user }: { user: SessionUser }) {

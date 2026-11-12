@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth/session";
 import { addTask, logContribution, setTaskStatus, verifyContribution } from "@/lib/services/contribution-service";
 import { submitRatings } from "@/lib/services/peer-evaluation";
-import { confirmMyRole, makeChannelPublic, saveCharter } from "@/lib/services/team-health";
+import { confirmMyRole, saveCharter } from "@/lib/services/team-health";
 import { UserError } from "@/lib/services/common";
 import type { ActionState } from "@/lib/action-state";
 import type { TaskStatus } from "@/lib/types";
@@ -95,11 +95,3 @@ export async function submitRatingsAction(teamId: number, milestoneId: number, _
   });
 }
 
-/** P17 — a team member makes their finished channel public. */
-export async function studentMakePublicAction(teamId: number, _: ActionState): Promise<ActionState> {
-  return attempt(async () => {
-    await makeChannelPublic(await getCurrentUser(), teamId);
-    revalidatePath(`/teams/${teamId}`);
-    return "Channel is public.";
-  });
-}

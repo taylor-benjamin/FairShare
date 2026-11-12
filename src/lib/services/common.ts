@@ -30,7 +30,6 @@ export async function loadTeam(user: SessionUser | null, teamId: number): Promis
       teamId: team.team_id,
       instructorId: team.instructor_id,
       channelStatus: team.channel_status,
-      visibility: team.visibility,
       membership: membership ? { accessLevel: membership.access_level } : null,
     },
   };

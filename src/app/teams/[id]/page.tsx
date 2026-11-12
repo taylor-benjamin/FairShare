@@ -1,8 +1,7 @@
 import { handlePageError } from "@/components/access-denied";
 import { ContributionCard } from "@/components/contribution-card";
-import { ActionForm, SubmitButton } from "@/components/forms";
 import { EmptyState, Page } from "@/components/ui";
-import { logTaskAction, studentMakePublicAction } from "@/app/actions/team";
+import { logTaskAction } from "@/app/actions/team";
 import { requireUser } from "@/lib/auth/session";
 import { getChannel } from "@/lib/services/contribution-service";
 import { LogTaskForm } from "./log-task-form";
@@ -19,7 +18,7 @@ export default async function TeamChannelPage({ params }: { params: Promise<{ id
   } catch (e) {
     return handlePageError(e);
   }
-  const { feed, canWrite, myTasks, canMakePublic, isInstructor } = channel;
+  const { feed, canWrite, myTasks } = channel;
   const needsReview = feed.filter((c) => c.canVerify).length;
   const today = new Date().toISOString().slice(0, 10);
 
@@ -47,19 +46,6 @@ export default async function TeamChannelPage({ params }: { params: Promise<{ id
             </div>
           )}
 
-          {canMakePublic && !isInstructor && (
-            <div className="card mt-6 p-4">
-              <p className="font-semibold">Share this finished channel</p>
-              <p className="mt-1 text-small text-hint">
-                Make the activity feed public and read-only so other teams (and future employers) can see your work. Ratings and evaluations always stay private.
-              </p>
-              <ActionForm action={studentMakePublicAction.bind(null, teamId)} className="mt-3">
-                <SubmitButton variant="secondary" pendingText="Sharing…">
-                  Make channel public
-                </SubmitButton>
-              </ActionForm>
-            </div>
-          )}
         </section>
       </div>
     </Page>

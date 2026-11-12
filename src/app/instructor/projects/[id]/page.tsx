@@ -93,8 +93,8 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
                             {t.team_name}
                           </Link>
                         )}
-                        <Chip tone={t.channel_status === "draft" ? "pending" : t.visibility === "public" ? "neutral" : t.channel_status === "finished" ? "pending" : "confirmed"}>
-                          {t.channel_status === "draft" ? "Draft" : t.visibility === "public" ? "Public" : t.channel_status === "finished" ? "Finished" : "Published"}
+                        <Chip tone={t.channel_status === "draft" ? "pending" : t.channel_status === "finished" ? "pending" : "confirmed"}>
+                          {t.channel_status === "draft" ? "Draft" : t.channel_status === "finished" ? "Finished" : "Published"}
                         </Chip>
                       </div>
                       <p className="mt-1 text-small text-hint">
@@ -176,7 +176,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
             thing="project"
             name={project.project_name}
             consequences={[
-              `All ${teams.length} team ${teams.length === 1 ? "channel" : "channels"} in this project, including any public ones`,
+              `All ${teams.length} team ${teams.length === 1 ? "channel" : "channels"} in this project`,
               "Every work log entry, confirmation, dispute, rating, comment and flag in those teams",
               `The project's ${milestones.length} ${milestones.length === 1 ? "milestone" : "milestones"}, charters, tasks and invite links`,
             ]}

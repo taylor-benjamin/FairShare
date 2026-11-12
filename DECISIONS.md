@@ -6,7 +6,7 @@ Choices made where the build spec or the Milestone 1/2 documents were silent, am
 
 1. **`projects.member_access` (migration 0002).** P07 lets the instructor change the template's default student access, but the Milestone 2 schema only stores `anonymous_evals` on `projects`. A nullable `member_access` column holds the choice (NULL = template default). Kept in its own migration so the deviation from the data dictionary is visible.
 2. **Invitations don't store names.** The roster CSV has first/last names, but `invitations` only has `invited_email` (per the data dictionary). Students type their name when they accept the invite. If you'd rather prefill it, add `invited_first_name`/`invited_last_name` to `invitations`.
-3. **Extra integrity constraints:** `UNIQUE(project_id, team_name)` on teams; public channels must be finished (`CHECK`); a trigger stops a verifier confirming their own contribution; disputes require a reason (`CHECK`); a completed milestone must have a completion date; `UNIQUE(milestone_id, team_id, rater_id, flag_type)` on flags so re-running the checks never duplicates them.
+3. **Extra integrity constraints:** `UNIQUE(project_id, team_name)` on teams; a trigger stops a verifier confirming their own contribution; disputes require a reason (`CHECK`); a completed milestone must have a completion date; `UNIQUE(milestone_id, team_id, rater_id, flag_type)` on flags so re-running the checks never duplicates them.
 4. **Emails are stored lower-case and compared case-insensitively.**
 
 ## Business rules
@@ -24,14 +24,14 @@ Choices made where the build spec or the Milestone 1/2 documents were silent, am
 ## Permissions
 
 14. **Students can't read a `draft` channel** even if listed; draft teams only have pending invitations anyway.
-15. **Finished-but-private channels** are read-only for students, but can still collect final peer ratings. Once public, nobody can write or rate.
-16. **Both instructors and team members may make a finished channel public** (P17 says "as a student"; the build spec says "instructor or team member").
+15. **Finished channels** are read-only for their students, but can still collect final peer ratings.
+16. **Public read-only channels (P17) were removed** (Nov 2026) as out of scope. Every channel is visible only to its members and the course instructor. The `teams.visibility` column stays in the schema but is always `private`.
 17. **Instructor dashboards and queues** are scoped by `courses.instructor_id` in SQL, and every mutation re-checks ownership through `can()`.
 
 ## Auth & email
 
 18. **Custom auth, not Auth.js.** The architecture diagram says "Auth.js", but the build spec asks for PBKDF2 via Web Crypto and a signed cookie with no Node-only libraries. Sessions are a 7-day HMAC-SHA256-signed token in an `HttpOnly; Secure; SameSite=Lax` cookie. PBKDF2 runs 100,000 iterations (the Cloudflare Workers maximum) with a 16-byte salt per user.
-19. **Who can sign up:** open sign-up is for **instructors and viewers**. Students join only through the single-use invite link, which creates their account and membership in one step. If the email already has a student account, the invite asks for that password and just adds the membership.
+19. **Who can sign up:** open sign-up creates **instructor** accounts only. The "viewer" role was removed (Nov 2026) along with public channels; any leftover viewer account can't sign in, and becomes a student if it accepts a team invite. Students join only through the single-use invite link, which creates their account and membership in one step. If the email already has a student account, the invite asks for that password and just adds the membership.
 20. **Resend via HTTP API** (no SDK) so it runs in Workers. Without `RESEND_API_KEY`, emails are logged to the console with their links. Sign-up sends a welcome email (P02 "email sign-up through Resend").
 21. **The `Secure` cookie flag is always on.** Browsers treat `http://localhost` as a secure context, so local dev still works.
 
@@ -50,7 +50,7 @@ Choices made where the build spec or the Milestone 1/2 documents were silent, am
 
 ## Deleting (added after Milestone 2)
 
-29. **Instructors can permanently delete a project or a team, and take a public channel back to private.** Only the course's instructor can (`project.delete`, `team.delete`, `team.unpublish` in `can()`); students and viewers never can, even for their own team.
+29. **Instructors can permanently delete a project or a team.** Only the course's instructor can (`project.delete`, `team.delete` in `can()`); students never can, even for their own team.
 30. **Deletes are explicit and all-or-nothing.** The schema has no `ON DELETE CASCADE`, so `repo.deleteTeam` / `repo.deleteProject` remove child rows in dependency order (flags, ratings, disputes, verifications, work log, reassignments, tasks, charter, invites, memberships, team; then milestones and the project) in one D1 batch.
 31. **What is kept:** user accounts (a student may be on other teams) and the course (so a new project can reuse it).
-32. **"Delete a public channel" = two options.** *Remove from public channels* makes it private and keeps everything; *Delete team* removes it entirely. The confirmation requires typing the exact name, and the server re-checks it.
+32. **Deleting requires typing the exact name**, and the server re-checks it.

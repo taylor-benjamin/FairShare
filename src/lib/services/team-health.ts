@@ -1,4 +1,4 @@
-// Team Health Service — charter (P14), reassignments (P13), early-warning dashboard (Epic 3), public channels (P17).
+// Team Health Service: charter (P14), reassignments (P13), early-warning dashboard (Epic 3).
 import "server-only";
 import { EARLY_WARNING } from "@/config/integrity-rules";
 import { authorize, can } from "../permissions";
@@ -70,7 +70,6 @@ export interface TeamSignal {
   teamId: number;
   teamName: string;
   channelStatus: string;
-  visibility: string;
   memberCount: number;
   openDisputes: number;
   openFlags: number;
@@ -117,7 +116,6 @@ export async function teamSignals(user: SessionUser | null, projectId: number, a
         teamId: t.team_id,
         teamName: t.team_name,
         channelStatus: t.channel_status,
-        visibility: t.visibility,
         memberCount: members.length,
         openDisputes,
         openFlags,
@@ -130,7 +128,7 @@ export async function teamSignals(user: SessionUser | null, projectId: number, a
   );
 }
 
-// ── Student and viewer navigation, public channels (P17) ─────────────────────
+// ── Student navigation ───────────────────────────────────────────────────────
 
 /** What the team channel header and tabs need; also the read check for every team page. */
 export async function teamHeader(user: SessionUser | null, teamId: number) {
@@ -146,13 +144,11 @@ export async function teamHeader(user: SessionUser | null, teamId: number) {
       instructor: can(user, "team.manage", resource),
     },
     readOnlyReason:
-      team.visibility === "public"
-        ? "This channel is public and read-only. Evaluations are never shown here."
-        : team.channel_status === "finished"
-          ? "This channel is finished. You can read it, but new work can't be logged."
-          : !can(user, "team.write", resource) && member
-            ? "You have read-only access to this channel."
-            : null,
+      team.channel_status === "finished"
+        ? "This channel is finished. You can read it, but new work can't be logged."
+        : !can(user, "team.write", resource) && member
+          ? "You have read-only access to this channel."
+          : null,
   };
 }
 
@@ -161,13 +157,3 @@ export async function myTeams(user: SessionUser | null) {
   return teams.forStudent(user.userId);
 }
 
-export async function publicChannels(user: SessionUser | null) {
-  authorize(user, "publicChannels.list");
-  return teams.publicChannels();
-}
-
-export async function makeChannelPublic(user: SessionUser | null, teamId: number) {
-  const { team } = await authorizeTeam(user, "team.makePublic", teamId);
-  if (team.visibility === "public") return;
-  await teams.makePublic(teamId);
-}

@@ -23,9 +23,7 @@ export default async function TeamLayout({ children, params }: { children: React
   const { team, tabs, readOnlyReason } = header;
   const back = tabs.instructor
     ? { href: `/instructor/teams/${teamId}`, label: "Instructor view" }
-    : user.role === "student" && !readOnlyReason?.startsWith("This channel is public")
-      ? { href: "/teams", label: "My teams" }
-      : { href: "/public", label: "Public channels" };
+    : { href: "/teams", label: "My teams" };
 
   const items = [
     { href: `/teams/${teamId}`, label: "Log & Verify", show: true },

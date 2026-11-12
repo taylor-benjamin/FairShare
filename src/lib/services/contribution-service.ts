@@ -45,7 +45,6 @@ export async function getChannel(user: SessionUser | null, teamId: number) {
     resource,
     canWrite,
     isInstructor: can(user, "team.manage", resource),
-    canMakePublic: can(user, "team.makePublic", resource) && team.visibility === "private",
     members,
     feed: items,
     tasks: teamTasks,

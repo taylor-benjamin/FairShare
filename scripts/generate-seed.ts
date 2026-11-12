@@ -34,7 +34,7 @@ const insert = (table: string, row: Record<string, unknown>) => {
 
 // ── People ───────────────────────────────────────────────────────────────────
 
-type Person = { id: number; first: string; last: string; role: "instructor" | "student" | "viewer" };
+type Person = { id: number; first: string; last: string; role: "instructor" | "student" };
 const people: Person[] = [
   { id: 1, first: "Linda", last: "Harris", role: "instructor" },
   // Team Tigers
@@ -47,21 +47,19 @@ const people: Person[] = [
   { id: 21, first: "Alex", last: "Rivera", role: "student" },
   { id: 22, first: "Sam", last: "Chen", role: "student" },
   { id: 23, first: "Taylor", last: "Nguyen", role: "student" },
-  // Team Magnolias (finished, public)
+  // Team Magnolias (finished)
   { id: 30, first: "Chris", last: "Lopez", role: "student" },
   { id: 31, first: "Emma", last: "Davis", role: "student" },
   { id: 32, first: "Noah", last: "Patel", role: "student" },
   { id: 33, first: "Olivia", last: "Kim", role: "student" },
-  // Read-only viewer
-  { id: 90, first: "Victor", last: "Lane", role: "viewer" },
 ];
-export const emailOf = (p: Person) => (p.role === "viewer" ? "viewer@fairshare.demo" : `${p.first}.${p.last}@fairshare.demo`.toLowerCase());
+export const emailOf = (p: Person) => `${p.first}.${p.last}@fairshare.demo`.toLowerCase();
 const P = Object.fromEntries(people.map((p) => [p.first.toLowerCase(), p])) as Record<string, Person>;
 
 const TEAMS = [
   { id: 1, name: "Team Tigers", status: "published", visibility: "private", members: ["marcus", "priya", "devon", "aaliyah"] },
   { id: 2, name: "Team Pelicans", status: "published", visibility: "private", members: ["jordan", "alex", "sam", "taylor"] },
-  { id: 3, name: "Team Magnolias", status: "finished", visibility: "public", members: ["chris", "emma", "noah", "olivia"] },
+  { id: 3, name: "Team Magnolias", status: "finished", visibility: "private", members: ["chris", "emma", "noah", "olivia"] },
 ] as const;
 
 async function main() {
@@ -260,7 +258,7 @@ async function main() {
     { by: "taylor", team: 2, text: "Ran the Friday check-in survey", hours: 0.5, daysAgo: 9, confirms: ["jordan", "sam"] },
     { by: "jordan", team: 2, text: "Merged feedback into the scope document", hours: 1.5, daysAgo: 6, confirms: ["alex"] },
     { by: "alex", team: 2, text: "Drafted milestone 2 research summary", hours: 2, daysAgo: 3 },
-    // Team Magnolias — a finished, public channel.
+    // Team Magnolias: a finished channel.
     { by: "chris", team: 3, text: "Set up the shared case-study outline", hours: 1, daysAgo: 45, confirms: ["emma", "noah"] },
     { by: "noah", team: 3, task: 9, text: "Wrote the case analysis section", hours: 5, daysAgo: 30, confirms: ["chris", "olivia"] },
     { by: "emma", team: 3, text: "Edited the full report for clarity", hours: 3, daysAgo: 22, confirms: ["chris", "noah", "olivia"] },

@@ -9,7 +9,7 @@ export default async function SignupPage() {
   const user = await getCurrentUser();
   if (user) redirect(homeFor(user.role));
   return (
-    <AuthShell title="Create an account" subtitle="We'll email you a welcome note with a link back here.">
+    <AuthShell title="Create an instructor account" subtitle="Students join through the invite link you send them.">
       <SignupForm />
     </AuthShell>
   );

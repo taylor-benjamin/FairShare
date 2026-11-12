@@ -140,7 +140,7 @@ export function explainSettings(p: Pick<ProjectWithCourse, "anonymous_evals" | "
       anonymous
         ? "Ratings are anonymous: students never see who rated them."
         : "Ratings show names: students can see which teammate gave each rating they received.",
-      "Each team channel is private to its members and you until a finished channel is made public.",
+      "Each team channel is private to its members and you.",
     ],
   };
 }
@@ -225,7 +225,7 @@ export async function completeMilestone(user: SessionUser | null, milestoneId: n
   await milestones.complete(milestoneId);
 }
 
-/** Closes a team channel to new work so it can be made public. */
+/** Closes a team channel to new work. Members can still read it. */
 export async function finishTeam(user: SessionUser | null, teamId: number) {
   const { team } = await authorizeTeam(user, "team.manage", teamId);
   if (team.channel_status !== "published") throw new UserError("Only a published channel can be marked finished.");
@@ -259,9 +259,3 @@ export async function deleteTeam(user: SessionUser | null, teamId: number, typed
   return team;
 }
 
-/** Takes a public channel back to private. Nothing is deleted. */
-export async function unpublishChannel(user: SessionUser | null, teamId: number) {
-  const { team } = await authorizeTeam(user, "team.unpublish", teamId);
-  if (team.visibility !== "public") throw new UserError("This channel isn't public.");
-  await teams.makePrivate(teamId);
-}

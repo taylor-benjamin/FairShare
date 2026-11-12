@@ -1,6 +1,6 @@
 // Shared domain types. Row shapes mirror the D1 tables (snake_case columns).
 
-export type SystemRole = "instructor" | "student" | "viewer";
+export type SystemRole = "instructor" | "student";
 export type AccessLevel = "read" | "write";
 export type ChannelStatus = "draft" | "published" | "finished";
 export type Visibility = "private" | "public";

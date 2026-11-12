@@ -121,8 +121,6 @@ export default async function InstructorDashboard({ searchParams }: { searchPara
                                 <Chip tone="pending">Draft</Chip>
                               ) : t.needsAttention ? (
                                 <Chip tone="review">Needs your review</Chip>
-                              ) : t.visibility === "public" ? (
-                                <Chip tone="neutral">Public</Chip>
                               ) : t.channelStatus === "finished" ? (
                                 <Chip tone="pending">Finished</Chip>
                               ) : (
