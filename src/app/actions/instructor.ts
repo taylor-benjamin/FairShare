@@ -12,6 +12,7 @@ import {
   finishTeam,
   importRoster,
   publishTeams,
+  resendInvitation,
   saveSettings,
   unpublishChannel,
 } from "@/lib/services/class-setup";
@@ -82,8 +83,10 @@ export async function publishAction(projectId: number, _: ActionState): Promise<
   return attempt(async () => {
     const r = await publishTeams(await getCurrentUser(), projectId, await appUrl());
     revalidatePath(`/instructor/projects/${projectId}`);
-    const how = r.delivered === r.emailed ? "emailed" : r.delivered === 0 ? "prepared (no email key is set, so the links were printed in the server terminal)" : `prepared (${r.delivered} delivered)`;
-    return `Published ${r.published} team channel${r.published === 1 ? "" : "s"}. ${r.emailed} sign-up invite${r.emailed === 1 ? "" : "s"} ${how}.`;
+    const teams = `Published ${r.published} team channel${r.published === 1 ? "" : "s"}.`;
+    if (r.delivered === r.emailed) return `${teams} ${r.emailed} invite${r.emailed === 1 ? "" : "s"} sent.`;
+    const failed = r.emailed - r.delivered;
+    throw new UserError(`${teams} ${failed} of ${r.emailed} invites didn't send${r.error ? `: ${r.error}` : "."} Use Copy link to share them.`);
   });
 }
 
@@ -181,5 +184,14 @@ export async function unpublishChannelAction(teamId: number, _: ActionState): Pr
     revalidatePath(`/instructor/teams/${teamId}`);
     revalidatePath("/public");
     return "Channel is private.";
+  });
+}
+
+export async function resendInviteAction(invitationId: number, projectId: number, _: ActionState): Promise<ActionState> {
+  return attempt(async () => {
+    const r = await resendInvitation(await getCurrentUser(), invitationId, await appUrl());
+    revalidatePath(`/instructor/projects/${projectId}`);
+    if (!r.delivered) throw new UserError(`Not sent${r.error ? `: ${r.error}` : "."}`);
+    return "Sent.";
   });
 }

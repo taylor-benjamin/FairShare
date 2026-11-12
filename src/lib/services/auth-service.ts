@@ -155,8 +155,10 @@ export async function acceptInvite(token: string, input: { firstName: string; la
 
   let user = await users.byEmail(inv.invited_email);
   if (user) {
-    if (user.system_role !== "student") throw new UserError("This email belongs to a non-student account. Ask your instructor to use a different email.");
+    if (user.system_role === "instructor") throw new UserError("This email belongs to an instructor account. Ask your instructor to use a different email.");
     if (!(await verifyPassword(input.password, user.password_hash))) throw new UserError("That password doesn't match your existing FairShare account.");
+    // A viewer who signed up on their own becomes a student when they accept a team invite.
+    if (user.system_role === "viewer") await users.setRole(user.user_id, "student");
   } else {
     checkName(input.firstName, input.lastName);
     checkPassword(input.password);

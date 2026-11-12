@@ -152,34 +152,62 @@ export async function getSetupOverview(user: SessionUser | null, projectId: numb
   return { project, teams: withInvites, milestones: await milestones.byProject(projectId), settings: explainSettings(project) };
 }
 
-/** P08 — publish every draft channel in the project and email each student a single-use sign-up link. */
-export async function publishTeams(user: SessionUser | null, projectId: number, appUrl: string): Promise<{ published: number; emailed: number; delivered: number }> {
+async function sendInviteEmail(project: ProjectWithCourse, teamName: string, inv: { invited_email: string; invite_token: string }, appUrl: string) {
+  const hasAccount = !!(await users.byEmail(inv.invited_email));
+  return sendEmail({
+    to: inv.invited_email,
+    subject: `You've been added to ${teamName} on FairShare`,
+    text:
+      `Hi,
+
+${project.course_code} (Section ${project.section_number}) is using FairShare for “${project.project_name}”. ` +
+      `You're on ${teamName}.
+
+` +
+      `${hasAccount ? "Join your team" : "Create your account and join your team"} here (this link works once):
+${appUrl}/invite/${inv.invite_token}
+
+` +
+      `In FairShare you log the work you finish, your teammates confirm it, and your grade reflects what you actually did.
+`,
+  });
+}
+
+/** P08: publish every draft channel in the project and email each student a single-use sign-up link. */
+export async function publishTeams(
+  user: SessionUser | null,
+  projectId: number,
+  appUrl: string,
+): Promise<{ published: number; emailed: number; delivered: number; error?: string }> {
   const project = await getProject(user, projectId);
   const drafts = (await teams.byProject(projectId)).filter((t) => t.channel_status === "draft");
   if (drafts.length === 0) throw new UserError("There are no draft teams to publish. Upload your class list first.");
 
   let emailed = 0;
   let delivered = 0;
+  let error: string | undefined;
   for (const team of drafts) {
     await teams.setStatus(team.team_id, "published");
     for (const inv of await invitations.byTeam(team.team_id)) {
       if (inv.invite_status !== "pending") continue;
-      const hasAccount = !!(await users.byEmail(inv.invited_email));
-      const link = `${appUrl}/invite/${inv.invite_token}`;
-      const result = await sendEmail({
-        to: inv.invited_email,
-        subject: `You've been added to ${team.team_name} on FairShare`,
-        text:
-          `Hi,\n\n${project.course_code} (Section ${project.section_number}) is using FairShare for “${project.project_name}”. ` +
-          `You're on ${team.team_name}.\n\n` +
-          `${hasAccount ? "Join your team" : "Create your account and join your team"} here (this link works once):\n${link}\n\n` +
-          `In FairShare you log the work you finish, your teammates confirm it, and your grade reflects what you actually did.\n`,
-      });
+      const result = await sendInviteEmail(project, team.team_name, inv, appUrl);
       emailed++;
       if (result.delivered) delivered++;
+      else error ??= result.error;
     }
   }
-  return { published: drafts.length, emailed, delivered };
+  return { published: drafts.length, emailed, delivered, error };
+}
+
+/** Re-sends one pending invite. Reports whether the email service accepted it. */
+export async function resendInvitation(user: SessionUser | null, invitationId: number, appUrl: string) {
+  const inv = Number.isInteger(invitationId) ? await invitations.byId(invitationId) : null;
+  if (!inv) throw new NotFoundError("That invite doesn't exist.");
+  const { team } = await authorizeTeam(user, "team.manage", inv.team_id);
+  if (inv.invite_status !== "pending") throw new UserError("This student already joined.");
+  if (team.channel_status === "draft") throw new UserError("Publish the team first.");
+  const project = await getProject(user, team.project_id);
+  return sendInviteEmail(project, team.team_name, inv, appUrl);
 }
 
 export async function addMilestone(user: SessionUser | null, projectId: number, name: string, dueDate: string) {

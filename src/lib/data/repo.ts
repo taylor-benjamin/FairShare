@@ -29,6 +29,7 @@ export { now };
 export const users = {
   byId: (id: number) => first<UserRow>("SELECT * FROM users WHERE user_id = ?", id),
   byEmail: (email: string) => first<UserRow>("SELECT * FROM users WHERE email = ? COLLATE NOCASE", email.trim()),
+  setRole: (userId: number, role: SystemRole) => run("UPDATE users SET system_role = ? WHERE user_id = ?", role, userId),
   setPassword: (userId: number, passwordHash: string) => run("UPDATE users SET password_hash = ? WHERE user_id = ?", passwordHash, userId),
   create: (u: { first_name: string; last_name: string; email: string; password_hash: string; system_role: SystemRole }) =>
     run(
@@ -163,6 +164,7 @@ export const memberships = {
 };
 
 export const invitations = {
+  byId: (id: number) => first<InvitationRow>("SELECT * FROM invitations WHERE invitation_id = ?", id),
   byToken: (token: string) => first<InvitationRow>("SELECT * FROM invitations WHERE invite_token = ?", token),
   byTeam: (teamId: number) => all<InvitationRow>("SELECT * FROM invitations WHERE team_id = ? ORDER BY invited_email", teamId),
   /** Accepting marks the invite used and adds the membership in one transaction. */

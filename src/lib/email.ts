@@ -20,13 +20,13 @@ function toHtml(text: string): string {
  * Sends through Resend's HTTP API (works in Workers, no SDK needed).
  * With no RESEND_API_KEY the email is printed to the terminal instead, so local setup never fails.
  */
-export async function sendEmail(email: Email): Promise<{ delivered: boolean }> {
+export async function sendEmail(email: Email): Promise<{ delivered: boolean; error?: string }> {
   const { RESEND_API_KEY, EMAIL_FROM } = config();
   if (!RESEND_API_KEY) {
     console.log(
       `\n──── FairShare email (RESEND_API_KEY not set — not sent) ────\nTo: ${email.to}\nSubject: ${email.subject}\n\n${email.text}\n─────────────────────────────────────────────────────────────\n`,
     );
-    return { delivered: false };
+    return { delivered: false, error: "Email isn't set up (no RESEND_API_KEY)." };
   }
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -34,8 +34,15 @@ export async function sendEmail(email: Email): Promise<{ delivered: boolean }> {
     body: JSON.stringify({ from: EMAIL_FROM, to: [email.to], subject: email.subject, text: email.text, html: toHtml(email.text) }),
   });
   if (!res.ok) {
-    console.error(`Resend rejected the email to ${email.to}: ${res.status} ${await res.text()}`);
-    return { delivered: false };
+    const body = await res.text();
+    console.error(`Resend rejected the email to ${email.to}: ${res.status} ${body}`);
+    let reason = `Email service error ${res.status}.`;
+    try {
+      reason = (JSON.parse(body) as { message?: string }).message ?? reason;
+    } catch {
+      // keep the generic reason
+    }
+    return { delivered: false, error: reason };
   }
   return { delivered: true };
 }

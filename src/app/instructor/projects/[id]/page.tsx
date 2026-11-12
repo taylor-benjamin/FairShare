@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { addMilestoneAction, completeMilestoneAction, deleteProjectAction, publishAction } from "@/app/actions/instructor";
+import { addMilestoneAction, completeMilestoneAction, deleteProjectAction, publishAction, resendInviteAction } from "@/app/actions/instructor";
+import { appUrl } from "@/app/actions/helpers";
+import { CopyLink } from "@/components/copy-link";
 import { DangerZone } from "@/components/danger-zone";
 import { handlePageError } from "@/components/access-denied";
 import { ActionForm, SubmitButton } from "@/components/forms";
@@ -21,6 +23,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
     return handlePageError(e);
   }
   const { project, teams, milestones, settings } = data;
+  const base = await appUrl();
   const drafts = teams.filter((t) => t.channel_status === "draft");
   const live = teams.filter((t) => t.channel_status !== "draft");
   const step = teams.length === 0 ? 2 : drafts.length > 0 ? 4 : 5;
@@ -97,13 +100,30 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
                       <p className="mt-1 text-small text-hint">
                         {t.channel_status === "draft" ? `${t.invitations.length} students to invite` : `${accepted} of ${t.invitations.length} students joined`}
                       </p>
-                      <ul className="mt-2 space-y-0.5 text-small">
-                        {t.invitations.map((i) => (
-                          <li key={i.invitation_id} className="flex justify-between gap-2">
-                            <span className="truncate">{i.invited_email}</span>
-                            <span className={i.invite_status === "accepted" ? "text-confirmed" : "text-hint"}>{i.invite_status === "accepted" ? "joined" : t.channel_status === "draft" ? "" : "invited"}</span>
-                          </li>
-                        ))}
+                      <ul className="mt-2 divide-y divide-line/70 text-small">
+                        {t.invitations.map((i) => {
+                          const canShare = i.invite_status === "pending" && t.channel_status !== "draft";
+                          return (
+                            <li key={i.invitation_id} className="py-1.5">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="min-w-0 truncate">{i.invited_email}</span>
+                                <span className={`shrink-0 ${i.invite_status === "accepted" ? "text-confirmed" : "text-hint"}`}>
+                                  {i.invite_status === "accepted" ? "Joined" : t.channel_status === "draft" ? "" : "Invited"}
+                                </span>
+                              </div>
+                              {canShare && (
+                                <div className="mt-0.5 flex flex-wrap items-center gap-1">
+                                  <CopyLink url={`${base}/invite/${i.invite_token}`} />
+                                  <ActionForm action={resendInviteAction.bind(null, i.invitation_id, projectId)} className="flex flex-wrap items-center gap-x-2">
+                                    <SubmitButton variant="ghost" small pendingText="Sending…" className="!border-0 !px-2.5 !py-1 !text-primary hover:!bg-primary-tint">
+                                      Resend
+                                    </SubmitButton>
+                                  </ActionForm>
+                                </div>
+                              )}
+                            </li>
+                          );
+                        })}
                       </ul>
                     </li>
                   );
