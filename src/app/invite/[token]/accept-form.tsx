@@ -27,7 +27,7 @@ export function AcceptInviteForm({ action: serverAction, email, hasAccount }: { 
       <Field
         label={hasAccount ? "Your FairShare password" : "Choose a password"}
         htmlFor="password"
-        hint={hasAccount ? "You already have an account — enter its password to join this team." : "At least 8 characters."}
+        hint={hasAccount ? "Use your existing FairShare password." : "At least 8 characters."}
       >
         <input id="password" name="password" type="password" autoComplete={hasAccount ? "current-password" : "new-password"} className="field-input" />
       </Field>
@@ -37,7 +37,7 @@ export function AcceptInviteForm({ action: serverAction, email, hasAccount }: { 
         </p>
       )}
       <SubmitButton full pendingText="Joining…" className="sm:w-full">
-        {hasAccount ? "Join my team" : "Create account and join"}
+        Join team
       </SubmitButton>
     </form>
   );

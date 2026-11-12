@@ -66,7 +66,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
                   Publish team channels
                 </SubmitButton>
                 <LinkButton href={`/instructor/projects/${projectId}/roster`} variant="secondary" full>
-                  Upload a different list
+                  Replace list
                 </LinkButton>
               </div>
             </ActionForm>
@@ -115,7 +115,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
 
           <section>
             <p className="section-label mb-3">Milestones</p>
-            <p className="mb-3 text-small text-hint">Mark a milestone complete when it&apos;s graded — that opens peer ratings for it.</p>
+            <p className="mb-3 text-small text-hint">Completing a milestone opens peer ratings.</p>
             <ul className="space-y-2">
               {milestones.map((m) => (
                 <li key={m.milestone_id} className="card p-3">
@@ -129,7 +129,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
                   {m.milestone_status === "open" && (
                     <ActionForm action={completeMilestoneAction.bind(null, m.milestone_id, projectId)} className="mt-2">
                       <SubmitButton variant="secondary" small pendingText="Saving…">
-                        Mark complete &amp; open ratings
+                        Mark complete
                       </SubmitButton>
                     </ActionForm>
                   )}

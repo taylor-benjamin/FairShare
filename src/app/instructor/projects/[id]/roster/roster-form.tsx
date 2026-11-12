@@ -139,7 +139,7 @@ export function RosterForm({ action: serverAction, backHref }: { action: (prev: 
           placeholder={"first_name,last_name,email,team_name\nMarcus,Reed,marcus.reed@school.edu,Team Tigers"}
           spellCheck={false}
         />
-        <p className="text-small text-hint">Tip: copy the four columns straight out of Excel or Google Sheets — commas or tabs both work if you save as CSV.</p>
+        <p className="text-small text-hint">Copy the four columns from Excel or Google Sheets.</p>
       </div>
 
       {localError && (
@@ -168,7 +168,7 @@ export function RosterForm({ action: serverAction, backHref }: { action: (prev: 
           Back
         </LinkButton>
         <SubmitButton full pendingText="Checking your list…">
-          Create team channels
+          Next
         </SubmitButton>
       </div>
     </form>

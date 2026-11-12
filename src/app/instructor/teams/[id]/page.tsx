@@ -165,7 +165,7 @@ export default async function InstructorTeamPage({ params, searchParams }: { par
                   <select id="taskId" name="taskId" className="field-input">
                     {assignedTasks.map((t) => (
                       <option key={t.task_id} value={t.task_id}>
-                        {t.task_title} — now {t.owner_first} {t.owner_last}
+                        {t.task_title} ({t.owner_first} {t.owner_last})
                       </option>
                     ))}
                   </select>
@@ -214,7 +214,7 @@ export default async function InstructorTeamPage({ params, searchParams }: { par
               <p className="text-small text-hint">When the project is over, finish the channel. Students can still read it but can&apos;t log new work.</p>
               <ActionForm action={finishTeamAction.bind(null, teamId)} className="mt-2">
                 <SubmitButton variant="secondary" pendingText="Finishing…">
-                  Finish this channel
+                  Finish channel
                 </SubmitButton>
               </ActionForm>
             </div>
@@ -235,7 +235,7 @@ export default async function InstructorTeamPage({ params, searchParams }: { par
               <p className="mt-3 text-small text-hint">Take it out of the public list. The channel becomes private again; nothing is deleted.</p>
               <ActionForm action={unpublishChannelAction.bind(null, teamId)} className="mt-2">
                 <SubmitButton variant="secondary" pendingText="Removing…">
-                  Remove from public channels
+                  Make private
                 </SubmitButton>
               </ActionForm>
             </div>

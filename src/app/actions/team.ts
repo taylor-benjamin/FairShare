@@ -31,7 +31,7 @@ export async function logTaskAction(teamId: number, _: ActionState, fd: FormData
     return { ...toActionError(e), values };
   }
   revalidatePath(`/teams/${teamId}`);
-  return { ok: "Logged. Your teammates will be asked to confirm it.", stamp: Date.now() };
+  return { ok: "Logged.", stamp: Date.now() };
 }
 
 /** P10 — confirm or dispute (reason required) a teammate's entry. */
@@ -40,7 +40,7 @@ export async function verifyAction(contributionId: number, teamId: number, _: Ac
     const decision = str(fd, "decision") === "dispute" ? "dispute" : "confirm";
     await verifyContribution(await getCurrentUser(), contributionId, decision, str(fd, "reason", 255));
     revalidatePath(`/teams/${teamId}`);
-    return decision === "dispute" ? "Disputed. Your instructor will review it." : "Confirmed.";
+    return decision === "dispute" ? "Disputed." : "Confirmed.";
   });
 }
 
@@ -68,7 +68,7 @@ export async function saveCharterAction(teamId: number, _: ActionState, fd: Form
     }
     await saveCharter(await getCurrentUser(), teamId, { goals: str(fd, "goals", 2000), expectations: str(fd, "expectations", 2000), roles });
     revalidatePath(`/teams/${teamId}/charter`);
-    return "Charter saved. Anyone whose role changed needs to confirm it.";
+    return "Charter saved.";
   });
 }
 
@@ -91,7 +91,7 @@ export async function submitRatingsAction(teamId: number, milestoneId: number, _
     if (ratings.length === 0) throw new UserError("Rate every teammate from 1 to 5 before submitting.");
     await submitRatings(await getCurrentUser(), teamId, milestoneId, ratings);
     revalidatePath(`/teams/${teamId}/ratings`);
-    return "Ratings submitted. Thank you — only your instructor can see them.";
+    return "Ratings submitted.";
   });
 }
 
@@ -100,6 +100,6 @@ export async function studentMakePublicAction(teamId: number, _: ActionState): P
   return attempt(async () => {
     await makeChannelPublic(await getCurrentUser(), teamId);
     revalidatePath(`/teams/${teamId}`);
-    return "Your channel is now public and read-only. Ratings stay private.";
+    return "Channel is public.";
   });
 }

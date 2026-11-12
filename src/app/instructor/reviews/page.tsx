@@ -48,7 +48,7 @@ export default async function ReviewsPage() {
                     }}
                     footer={
                       <ActionForm action={resolveDisputeAction.bind(null, d.dispute_id)} className="mt-3 space-y-2 border-t border-line pt-3">
-                        <Field label="Your note to the team" htmlFor={`note-${d.dispute_id}`} hint="Required. e.g. “Checked the file history — Marcus built it.”">
+                        <Field label="Your note to the team" htmlFor={`note-${d.dispute_id}`} hint="Required. The team sees this.">
                           <input id={`note-${d.dispute_id}`} name="note" maxLength={255} className="field-input" />
                         </Field>
                         <div className="flex flex-wrap gap-2">
@@ -56,7 +56,7 @@ export default async function ReviewsPage() {
                             Uphold dispute
                           </SubmitButton>
                           <SubmitButton variant="confirm" small name="resolution" value="rejected" pendingText="Saving…">
-                            Reject — entry counts
+                            Reject dispute
                           </SubmitButton>
                         </div>
                       </ActionForm>
@@ -71,7 +71,7 @@ export default async function ReviewsPage() {
                 <ul className="mt-2 space-y-2 text-small">
                   {disputes.resolved.map((d) => (
                     <li key={d.dispute_id} className="rounded-xl bg-wash p-3.5">
-                      <span className="font-semibold">{d.team_name}</span> · {d.author_name}: “{d.description}” —{" "}
+                      <span className="font-semibold">{d.team_name}</span> · {d.author_name}: “{d.description}” ·{" "}
                       <span className={d.dispute_status === "upheld" ? "text-disputed" : "text-confirmed"}>{d.dispute_status}</span>
                       {d.resolution_note && <span className="block text-hint">{d.resolution_note}</span>}
                     </li>
@@ -84,7 +84,7 @@ export default async function ReviewsPage() {
           <section>
             <h2 className="text-heading">Unusual rating patterns</h2>
             <p className="mt-1 text-small text-hint">
-              FairShare checks every set of ratings for two patterns. A flag isn&apos;t proof of anything — dismiss it if the ratings look reasonable to you.
+              FairShare checks every set of ratings for two patterns. A flag isn&apos;t proof. Dismiss any that look fine.
             </p>
             <div className="mt-4 space-y-3">
               {flags.open.length === 0 && <EmptyState title="No open flags" />}
@@ -102,10 +102,10 @@ export default async function ReviewsPage() {
                   <p className="mt-1">{f.flag_details}</p>
                   <ActionForm action={reviewFlagAction.bind(null, f.flag_id)} className="mt-3 flex flex-wrap gap-2">
                     <SubmitButton variant="secondary" small name="status" value="dismissed" pendingText="Saving…">
-                      Looks fine — dismiss
+                      Dismiss
                     </SubmitButton>
                     <SubmitButton variant="dispute" small name="status" value="confirmed" pendingText="Saving…">
-                      Confirm problem
+                      Confirm
                     </SubmitButton>
                   </ActionForm>
                 </div>
@@ -117,7 +117,7 @@ export default async function ReviewsPage() {
                 <ul className="mt-2 space-y-2 text-small">
                   {flags.reviewed.map((f) => (
                     <li key={f.flag_id} className="rounded-xl bg-wash p-3.5">
-                      {f.team_name}: {f.flag_details} — {f.review_status}
+                      {f.team_name}: {f.flag_details} · {f.review_status}
                     </li>
                   ))}
                 </ul>

@@ -50,7 +50,7 @@ export async function forgotPasswordAction(_: ActionState, fd: FormData): Promis
   const email = str(fd, "email", 100);
   const result = await attempt(async () => {
     await requestPasswordReset(email, await appUrl());
-    return "If that email has a FairShare account, a reset link is on its way. It expires in 1 hour — check your spam folder too.";
+    return "If that email has an account, a reset link is on its way.";
   });
   return { ...result, values: { email } };
 }

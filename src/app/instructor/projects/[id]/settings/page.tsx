@@ -42,7 +42,7 @@ export default async function SettingsPage({ params, searchParams }: { params: P
         {imported && (
           <div className="mb-5">
             <Notice tone="success">
-              Your list looks good: {studentCount} students in {teamCount} teams. Their channels are saved as drafts — nobody is emailed until you publish.
+              Your list looks good: {studentCount} students in {teamCount} teams. Saved as drafts. No one is emailed until you publish.
             </Notice>
           </div>
         )}
@@ -81,7 +81,7 @@ export default async function SettingsPage({ params, searchParams }: { params: P
           <p className="text-small text-hint">Either way, only you can see every rating and the comments students write.</p>
 
           <SubmitButton full pendingText="Saving…">
-            Keep these settings and continue
+            Next
           </SubmitButton>
         </ActionForm>
       </Page>

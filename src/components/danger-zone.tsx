@@ -37,7 +37,7 @@ export function DangerZone({
       {/* Native <details>: opens without JavaScript, and the form is always in the page. */}
       <details ref={detailsRef} className="group mt-3">
         <summary className="inline-flex cursor-pointer list-none items-center rounded-(--radius-control) border border-disputed/50 bg-surface px-3.5 py-1.5 text-small font-semibold text-disputed transition hover:border-disputed hover:bg-disputed-soft group-open:hidden [&::-webkit-details-marker]:hidden">
-          Delete {thing}…
+          Delete {thing}
         </summary>
         <form action={action} className="space-y-3" noValidate>
           <div className="rounded-xl bg-disputed-soft/60 p-3 text-small">
@@ -93,11 +93,11 @@ export function DangerZone({
 function DeleteButton({ disabled, thing }: { disabled: boolean; thing: string }) {
   return disabled ? (
     <Button type="button" small disabled className="!border-disputed !bg-disputed !text-white !shadow-none">
-      Permanently delete {thing}
+      Delete {thing}
     </Button>
   ) : (
     <SubmitButton small pendingText="Deleting…" className="!border-disputed !bg-disputed !shadow-none hover:!bg-red-700">
-      Permanently delete {thing}
+      Delete {thing}
     </SubmitButton>
   );
 }

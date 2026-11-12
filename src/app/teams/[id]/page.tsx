@@ -38,7 +38,7 @@ export default async function TeamChannelPage({ params }: { params: Promise<{ id
             {needsReview > 0 && <p className="text-small text-primary">{needsReview} waiting for you</p>}
           </div>
           {feed.length === 0 ? (
-            <EmptyState title="No work logged yet">{canWrite ? "Log the first thing you finished — it takes under a minute." : "Nothing has been logged in this channel."}</EmptyState>
+            <EmptyState title="No work logged yet">{canWrite ? "Log the first thing you finished." : "Nothing has been logged in this channel."}</EmptyState>
           ) : (
             <div className="space-y-3">
               {feed.map((c) => (

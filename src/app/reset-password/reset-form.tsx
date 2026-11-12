@@ -24,7 +24,7 @@ export function ResetPasswordForm({ action: serverAction, email }: { action: (pr
         </p>
       )}
       <SubmitButton full pendingText="Saving…" className="sm:w-full">
-        Save new password and log in
+        Save password
       </SubmitButton>
     </form>
   );

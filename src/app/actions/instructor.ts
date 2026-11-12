@@ -99,7 +99,7 @@ export async function completeMilestoneAction(milestoneId: number, projectId: nu
   return attempt(async () => {
     await completeMilestone(await getCurrentUser(), milestoneId);
     revalidatePath(`/instructor/projects/${projectId}`);
-    return "Milestone complete — students can now rate their teammates.";
+    return "Milestone complete. Ratings are open.";
   });
 }
 
@@ -109,7 +109,7 @@ export async function finishTeamAction(teamId: number, _: ActionState): Promise<
   return attempt(async () => {
     await finishTeam(await getCurrentUser(), teamId);
     revalidatePath(`/instructor/teams/${teamId}`);
-    return "Channel finished. Students can still read it but can't log new work.";
+    return "Channel finished.";
   });
 }
 
@@ -118,7 +118,7 @@ export async function makePublicAction(teamId: number, _: ActionState): Promise<
     await makeChannelPublic(await getCurrentUser(), teamId);
     revalidatePath(`/instructor/teams/${teamId}`);
     revalidatePath(`/teams/${teamId}`);
-    return "This channel is now public and read-only. Evaluations stay private.";
+    return "Channel is public.";
   });
 }
 
@@ -129,7 +129,7 @@ export async function reassignAction(teamId: number, _: ActionState, fd: FormDat
     if (taskId === null || toUserId === null) throw new UserError("Pick a task and the teammate taking it over.");
     await reassignTask(await getCurrentUser(), taskId, toUserId, str(fd, "reason", 255));
     revalidatePath(`/instructor/teams/${teamId}`);
-    return "Reassignment recorded. Future work on this task counts for the new owner.";
+    return "Reassignment recorded.";
   });
 }
 
@@ -138,7 +138,7 @@ export async function resolveDisputeAction(disputeId: number, _: ActionState, fd
     const resolution = str(fd, "resolution") === "upheld" ? "upheld" : "rejected";
     await resolveDispute(await getCurrentUser(), disputeId, resolution, str(fd, "note", 255));
     revalidatePath("/instructor", "layout");
-    return resolution === "upheld" ? "Dispute upheld — the entry won't count." : "Dispute rejected — the entry now counts as confirmed.";
+    return resolution === "upheld" ? "Dispute upheld." : "Dispute rejected.";
   });
 }
 
@@ -180,6 +180,6 @@ export async function unpublishChannelAction(teamId: number, _: ActionState): Pr
     await unpublishChannel(await getCurrentUser(), teamId);
     revalidatePath(`/instructor/teams/${teamId}`);
     revalidatePath("/public");
-    return "Removed from public channels. The channel is private again; nothing was deleted.";
+    return "Channel is private.";
   });
 }

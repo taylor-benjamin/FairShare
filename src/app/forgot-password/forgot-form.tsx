@@ -31,7 +31,7 @@ export function ForgotPasswordForm() {
         </p>
       )}
       <SubmitButton full pendingText="Sending…" className="sm:w-full">
-        Email me a reset link
+        Send reset link
       </SubmitButton>
       <p className="text-center text-small">
         <Link href="/login" className="link">

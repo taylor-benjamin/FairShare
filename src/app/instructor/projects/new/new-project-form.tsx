@@ -38,7 +38,7 @@ export function NewProjectForm({ templates, courses, defaults }: Props) {
             <select id="courseId" name="courseId" value={courseId} onChange={(e) => setCourseId(e.target.value)} className="field-input">
               {courses.map((c) => (
                 <option key={c.course_id} value={c.course_id}>
-                  {c.course_code} {c.course_name} — Section {c.section_number}
+                  {c.course_code} {c.course_name} · Section {c.section_number}
                 </option>
               ))}
               <option value="new">A different course or section…</option>
@@ -85,7 +85,7 @@ export function NewProjectForm({ templates, courses, defaults }: Props) {
         <LinkButton href="/instructor" variant="secondary">
           Cancel
         </LinkButton>
-        <SubmitButton pendingText="Creating…">Next: upload class list</SubmitButton>
+        <SubmitButton pendingText="Creating…">Next</SubmitButton>
       </div>
     </form>
   );
