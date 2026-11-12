@@ -10,7 +10,6 @@ import {
   validateHours,
   type Rating,
 } from "@/lib/rules";
-import { computeAdjustedGrade, CONTRIBUTION_FORMULA } from "@/config/contribution-formula";
 
 describe("claim-and-verify status", () => {
   it("stays pending until a majority of the other members confirm", () => {
@@ -91,33 +90,6 @@ describe("integrity flags", () => {
     for (const a of members) for (const b of members) if (a !== b) ratings.push({ evaluatorId: a, evaluateeId: b, score: a === b ? 0 : 4 + ((a + b) % 2) });
     const flags = detectIntegrityFlags(ratings, members, names).filter((f) => f.type === "reciprocal_scores");
     expect(flags).toEqual([]);
-  });
-});
-
-describe("contribution formula", () => {
-  it("scales the team grade by member average ÷ team average", () => {
-    const r = computeAdjustedGrade({ teamGrade: 90, memberAverage: 4.5, teamAverage: 4.0 });
-    expect(r.factor).toBeCloseTo(1.125);
-    expect(r.adjustedGrade).toBe(101.3);
-    expect(r.capped).toBeNull();
-    expect(r.explanation).toBe("90 × (4.50 ÷ 4.00) = 101.3");
-  });
-
-  it("caps at the configured maximum", () => {
-    const r = computeAdjustedGrade({ teamGrade: 100, memberAverage: 5, teamAverage: 3 });
-    expect(r.adjustedGrade).toBe(CONTRIBUTION_FORMULA.MAX_PERCENT);
-    expect(r.capped).toBe("high");
-  });
-
-  it("keeps the team grade when there are no ratings", () => {
-    const r = computeAdjustedGrade({ teamGrade: 88, memberAverage: null, teamAverage: 4 });
-    expect(r.adjustedGrade).toBe(88);
-    expect(r.factor).toBe(1);
-  });
-
-  it("lowers the grade of a low-rated member", () => {
-    const r = computeAdjustedGrade({ teamGrade: 90, memberAverage: 2, teamAverage: 4 });
-    expect(r.adjustedGrade).toBe(45);
   });
 });
 

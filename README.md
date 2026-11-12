@@ -2,7 +2,7 @@
 
 Peer evaluation and team contribution app — ISDS 4125, Team Tigers (Abby Hall, Isaac Morris, Rylie Richard, Sarah Jeffrey, Ben Taylor).
 
-Instructors set up a private channel per team from a roster CSV. Students log the work they finish; teammates confirm or dispute each entry; disputes go to the instructor. At each completed milestone students rate teammates 1–5 (anonymously by default). The app flags suspicious rating patterns, warns the instructor about struggling teams, and shows a transparent contribution score. Finished channels can be made public, read-only.
+Instructors set up a private channel per team from a roster CSV. Students log the work they finish; teammates confirm or dispute each entry; disputes go to the instructor. At each completed milestone students rate teammates 1–5 (anonymously by default). The app flags suspicious rating patterns, and warns the instructor about struggling teams. Finished channels can be made public, read-only.
 
 **Live:** https://fairshare.page (production database starts empty — sign up as an instructor, then invite students from a roster).
 
@@ -50,7 +50,7 @@ The seed (`scripts/generate-seed.ts`) computes dates relative to *now*, so "no w
 ### Tests
 
 ```bash
-npm test          # Vitest: permission check for every role, business rules, crypto (46 tests)
+npm test          # Vitest: permission check for every role, business rules, crypto, password reset (48 tests)
 npm run lint      # TypeScript type check
 ```
 
@@ -98,7 +98,7 @@ A ready-to-use invite link (Team Pelicans, not yet accepted): **`/invite/demo-in
 
 1. **Linda** → Dashboard: *"Team Tigers in Section 2 may need attention"* (Devon inactive, one dispute, one unusual rating).
 2. **Linda** → Reviews: uphold Devon's disputed "login screen" entry with a note; dismiss or confirm the all-5s flag.
-3. **Linda** → Team Tigers: enter a team grade, see each member's adjusted grade with the math; reassign "Prototype test plan" from Devon to Priya.
+3. **Linda** → Team Tigers: review the peer ratings; reassign "Prototype test plan" from Devon to Priya.
 4. **Marcus** (narrow your browser to phone width) → Log & Verify: confirm Aaliyah's entry, log a task in under a minute.
 5. **Linda** → New project → upload `public/sample-roster.csv` → review settings → Publish. Invite links appear in the terminal; open one to join as a new student.
 6. **Linda** → Project → mark Milestone 2 complete; **Marcus** → Ratings → rate teammates.
@@ -106,19 +106,7 @@ A ready-to-use invite link (Team Pelicans, not yet accepted): **`/invite/demo-in
 
 ---
 
-## Contribution formula
-
-Defined in one file: [`src/config/contribution-formula.ts`](src/config/contribution-formula.ts).
-
-```
-adjusted grade = team grade × (member's average peer rating ÷ team's average peer rating)
-```
-
-- Ratings come from every **completed** milestone in the project.
-- The result is capped between **0 and 105**.
-- A member with no ratings yet keeps the team grade (factor = 1).
-- Confirmed hours and entry counts are shown alongside as evidence but are **not** part of the math, so the formula stays easy to explain.
-- The instructor types the team grade on the team page (default 100); the screen shows the working for every student, e.g. `90 × (4.33 ÷ 3.92) = 99.6`.
+## Integrity checks
 
 Integrity and early-warning thresholds live in [`src/config/integrity-rules.ts`](src/config/integrity-rules.ts):
 - **Identical scores:** a rater who rated every teammate (≥ 2) and gave all the same score.
@@ -139,7 +127,7 @@ UI (app/ pages, server actions)
 ```
 
 - Pages and server actions call **services only**. Every service calls `authorize()` (which calls `can()`) with facts loaded from the database before it reads or writes.
-- Pure business rules (verification majority, charter completion, integrity flags, roster parsing, the formula) live in `src/lib/rules.ts` and `src/config/` with no I/O, so they're unit-tested.
+- Pure business rules (verification majority, charter completion, integrity flags, roster parsing) live in `src/lib/rules.ts` and `src/config/` with no I/O, so they're unit-tested.
 - Server actions are bound with their ids in server components (`action.bind(null, teamId)`), so ids are encrypted and can't be swapped in the browser; services re-check permissions regardless.
 
 Project layout:
@@ -150,7 +138,7 @@ scripts/                generate-seed.ts, db-setup.mjs
 src/app/                routes: /login /signup /invite/[token] /instructor/** /teams/** /public
 src/app/actions/        server actions (thin: parse form → call service → return message)
 src/components/         design-system components (Button, Field, Chip, HeaderBar, ContributionCard)
-src/config/             contribution formula and rule thresholds
+src/config/             integrity and early-warning thresholds
 src/lib/                auth, permissions, rules, services, data access
 tests/                  Vitest unit tests
 ```

@@ -1,6 +1,5 @@
-// Peer Evaluation Service — ratings (P15), anonymity (P12), integrity flags (P16), contribution formula.
+// Peer Evaluation Service: ratings (P15), anonymity (P12), integrity flags (P16).
 import "server-only";
-import { computeAdjustedGrade, CONTRIBUTION_FORMULA } from "@/config/contribution-formula";
 import { authorize } from "../permissions";
 import { contributions, evaluations, flags, memberships, milestones } from "../data/repo";
 import { average, detectIntegrityFlags } from "../rules";
@@ -103,41 +102,15 @@ export async function myFeedback(user: SessionUser | null, teamId: number) {
     })),
     myAverage: myAvg,
     teamAverage: teamAvg,
-    factor: myAvg !== null && teamAvg ? myAvg / teamAvg : null,
     confirmedHours: mine?.confirmed_hours ?? 0,
     confirmedCount: mine?.confirmed_count ?? 0,
   };
 }
 
-/** Instructor view of one team's ratings and contribution scores, with the math shown. */
-export async function teamResults(user: SessionUser | null, teamId: number, teamGradeRaw: number | null) {
+/** Instructor view of one team's peer ratings, with evaluator names. */
+export async function teamRatings(user: SessionUser | null, teamId: number) {
   const { team } = await authorizeTeam(user, "evaluation.readAll", teamId);
-  const teamGrade = teamGradeRaw !== null && Number.isFinite(teamGradeRaw) && teamGradeRaw >= 0 && teamGradeRaw <= 100 ? teamGradeRaw : CONTRIBUTION_FORMULA.DEFAULT_TEAM_GRADE;
-  const [members, completed, hours, ms] = await Promise.all([
-    memberships.byTeam(teamId),
-    evaluations.byTeamCompleted(teamId),
-    contributions.hoursByMember(teamId),
-    milestones.byProject(team.project_id),
-  ]);
-  const teamAverage = average(completed.map((e) => e.score));
-  const rows = members.map((m) => {
-    const received = completed.filter((e) => e.evaluatee_id === m.user_id);
-    const memberAverage = average(received.map((e) => e.score));
-    const h = hours.find((x) => x.user_id === m.user_id);
-    return {
-      userId: m.user_id,
-      name: fullName(m),
-      short: shortName(m),
-      role: m.team_role,
-      ratingCount: received.length,
-      memberAverage,
-      confirmedHours: h?.confirmed_hours ?? 0,
-      confirmedCount: h?.confirmed_count ?? 0,
-      pendingCount: h?.pending_count ?? 0,
-      disputedCount: h?.disputed_count ?? 0,
-      result: computeAdjustedGrade({ teamGrade, memberAverage, teamAverage }),
-    };
-  });
+  const [members, completed, ms] = await Promise.all([memberships.byTeam(teamId), evaluations.byTeamCompleted(teamId), milestones.byProject(team.project_id)]);
   const matrix = ms
     .filter((m) => m.milestone_status === "completed")
     .map((m) => ({
@@ -153,7 +126,7 @@ export async function teamResults(user: SessionUser | null, teamId: number, team
           comment: e.comment,
         })),
     }));
-  return { team, teamGrade, teamAverage, rows, matrix, formula: CONTRIBUTION_FORMULA };
+  return { team, matrix };
 }
 
 // ── Integrity flag review (P16) ──────────────────────────────────────────────

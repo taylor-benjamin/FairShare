@@ -1,12 +1,11 @@
 import { handlePageError } from "@/components/access-denied";
 import { EmptyState, formatHours, Page } from "@/components/ui";
-import { CONTRIBUTION_FORMULA } from "@/config/contribution-formula";
 import { requireUser } from "@/lib/auth/session";
 import { myFeedback } from "@/lib/services/peer-evaluation";
 
 export const metadata = { title: "My feedback" };
 
-/** A student's private dashboard: ratings they received and how the contribution formula treats them. */
+/** A student's private dashboard: ratings they received and their confirmed work. */
 export default async function FeedbackPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
   const teamId = Number((await params).id);
@@ -16,7 +15,7 @@ export default async function FeedbackPage({ params }: { params: Promise<{ id: s
   } catch (e) {
     return handlePageError(e);
   }
-  const { ratings, myAverage, teamAverage, factor, confirmedHours, confirmedCount, anonymous } = data;
+  const { ratings, myAverage, teamAverage, confirmedHours, confirmedCount, anonymous } = data;
 
   return (
     <Page narrow>
@@ -37,15 +36,6 @@ export default async function FeedbackPage({ params }: { params: Promise<{ id: s
         ))}
       </div>
 
-      <div className="card mt-4 bg-wash p-4">
-        <p className="section-label">How your grade is adjusted</p>
-        <p className="mt-1">{CONTRIBUTION_FORMULA.label}.</p>
-        <p className="mt-1 text-small text-hint">
-          {factor !== null
-            ? `Right now your factor is ${myAverage!.toFixed(2)} ÷ ${teamAverage!.toFixed(2)} = ${factor.toFixed(3)}, so a team grade of 90 would become ${Math.min(CONTRIBUTION_FORMULA.MAX_PERCENT, 90 * factor).toFixed(1)}. Grades are capped at ${CONTRIBUTION_FORMULA.MAX_PERCENT}%.`
-            : "Once a milestone is rated, your factor will appear here."}
-        </p>
-      </div>
 
       <h3 className="mt-8 font-semibold">Ratings you received</h3>
       <p className="text-small text-hint">{anonymous ? "Ratings are anonymous, so names are hidden." : "Your class shows who gave each rating."}</p>

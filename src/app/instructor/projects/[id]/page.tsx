@@ -110,7 +110,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
                 })}
               </ul>
             )}
-            {live.length > 0 && <p className="mt-3 text-small text-hint">Open a team to see its work log, ratings, contribution scores, and to record task reassignments.</p>}
+            {live.length > 0 && <p className="mt-3 text-small text-hint">Open a team to see its work log and ratings, or to reassign tasks.</p>}
           </section>
 
           <section>

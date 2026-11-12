@@ -38,7 +38,7 @@ Choices made where the build spec or the Milestone 1/2 documents were silent, am
 ## UI
 
 22. **Setup wizard order** follows the Epic 1 activity diagram: 1 Project/template → 2 Class list → 3 Settings (explained, accept or adjust) → 4 Publish.
-23. **The team grade for the formula** isn't in the schema, so the instructor types it on the team page (a URL parameter, not stored). Store it later if grades should persist.
+23. **Contribution scores were removed** (Nov 2026). The adjusted-grade formula is out of scope; instructors see peer ratings, confirmed work and integrity flags, and grade outside the app.
 24. **Tasks tab.** The schema has `tasks`, but no PBI creates them, so team members can add and update tasks; this is what makes reassignment (P13) and task linking (P09) demonstrable.
 25. **Demo accounts box** on the login page shows in dev only (or in production with `SHOW_DEMO_LOGINS=1`).
 

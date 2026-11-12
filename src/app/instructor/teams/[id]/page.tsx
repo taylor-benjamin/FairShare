@@ -4,23 +4,22 @@ import { DangerZone } from "@/components/danger-zone";
 import { handlePageError } from "@/components/access-denied";
 import { ContributionCard } from "@/components/contribution-card";
 import { ActionForm, SubmitButton } from "@/components/forms";
-import { ArrowIcon, Chip, EmptyState, Field, formatDate, formatHours, HeaderBar, Notice, Page } from "@/components/ui";
+import { ArrowIcon, Chip, EmptyState, Field, formatDate, HeaderBar, Notice, Page } from "@/components/ui";
 import { requireUser } from "@/lib/auth/session";
 import { getChannel } from "@/lib/services/contribution-service";
-import { teamResults } from "@/lib/services/peer-evaluation";
+import { teamRatings } from "@/lib/services/peer-evaluation";
 import { getReassignments, teamSignals } from "@/lib/services/team-health";
 
 export const metadata = { title: "Team" };
 
-export default async function InstructorTeamPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ grade?: string }> }) {
+export default async function InstructorTeamPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser(["instructor"]);
   const teamId = Number((await params).id);
-  const gradeParam = (await searchParams).grade;
   let channel, results, history, signal;
   try {
     [channel, results, history] = await Promise.all([
       getChannel(user, teamId),
-      teamResults(user, teamId, gradeParam !== undefined && gradeParam !== "" ? Number(gradeParam) : null),
+      teamRatings(user, teamId),
       getReassignments(user, teamId),
     ]);
     signal = (await teamSignals(user, channel.team.project_id)).find((s) => s.teamId === teamId);
@@ -69,55 +68,8 @@ export default async function InstructorTeamPage({ params, searchParams }: { par
           </div>
         )}
 
-        {/* Contribution scores — the transparent formula */}
-        <section className="mb-10">
-          <h2 className="text-heading">Contribution scores</h2>
-          <p className="mt-1 text-small text-hint">{results.formula.label}. Capped at {results.formula.MAX_PERCENT}%. Ratings from completed milestones only.</p>
-          <form className="mt-3 flex items-end gap-2" method="get">
-            <Field label="Team grade (0–100)" htmlFor="grade">
-              <input id="grade" name="grade" type="number" min={0} max={100} step="0.5" defaultValue={results.teamGrade} className="field-input w-28" />
-            </Field>
-            <button className="rounded-lg border border-primary px-3 py-2.5 text-small font-semibold text-primary hover:bg-primary-soft">Recalculate</button>
-          </form>
-          <div className="mt-4 card overflow-x-auto">
-            <table className="table-soft w-full min-w-[640px] text-left text-small">
-              <thead className="bg-wash text-hint">
-                <tr>
-                  <th className="px-3 py-2">Member</th>
-                  <th className="px-3 py-2">Avg rating</th>
-                  <th className="px-3 py-2">The math</th>
-                  <th className="px-3 py-2">Adjusted grade</th>
-                  <th className="px-3 py-2">Confirmed work</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                {results.rows.map((r) => (
-                  <tr key={r.userId}>
-                    <td className="px-3 py-2">
-                      <span className="text-body">{r.name}</span>
-                      {r.role && <span className="block text-hint">{r.role}</span>}
-                    </td>
-                    <td className="px-3 py-2">{r.memberAverage !== null ? `${r.memberAverage.toFixed(2)} (${r.ratingCount})` : "—"}</td>
-                    <td className="px-3 py-2 font-mono text-[12px]">{r.result.explanation}</td>
-                    <td className="px-3 py-2 text-body font-semibold">{r.result.adjustedGrade}</td>
-                    <td className="px-3 py-2">
-                      {formatHours(r.confirmedHours) || "0 h"} · {r.confirmedCount} confirmed
-                      {(r.pendingCount > 0 || r.disputedCount > 0) && (
-                        <span className="block text-hint">
-                          {r.pendingCount} pending{r.disputedCount > 0 && <span className="text-disputed"> · {r.disputedCount} disputed</span>}
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p className="mt-2 text-small text-hint">Team average rating: {results.teamAverage !== null ? results.teamAverage.toFixed(2) : "no ratings yet"}.</p>
-        </section>
-
         <div className="grid gap-10 lg:grid-cols-2">
-          {/* Peer ratings with names — instructor only */}
+          {/* Peer ratings with names: instructor only */}
           <section>
             <h2 className="text-heading">Peer ratings</h2>
             <p className="mt-1 text-small text-hint">Only you can see who gave which rating.</p>
