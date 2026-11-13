@@ -13,6 +13,9 @@ import {
   importRoster,
   publishTeams,
   resendInvitation,
+  addStudent,
+  removeMember,
+  cancelInvitation,
   saveSettings,
 } from "@/lib/services/class-setup";
 import { resolveDispute } from "@/lib/services/contribution-service";
@@ -70,7 +73,6 @@ export async function saveSettingsAction(projectId: number, _: ActionState, fd: 
   try {
     await saveSettings(await getCurrentUser(), projectId, {
       anonymous: str(fd, "anonymous") !== "no",
-      memberAccess: str(fd, "memberAccess") === "read" ? "read" : "write",
     });
   } catch (e) {
     return toActionError(e);
@@ -175,5 +177,33 @@ export async function resendInviteAction(invitationId: number, projectId: number
     revalidatePath(`/instructor/projects/${projectId}`);
     if (!r.delivered) throw new UserError(`Not sent${r.error ? `: ${r.error}` : "."}`);
     return "Sent.";
+  });
+}
+
+// ── Team membership after publishing ─────────────────────────────────────────
+
+export async function addStudentAction(teamId: number, _: ActionState, fd: FormData): Promise<ActionState> {
+  return attempt(async () => {
+    const r = await addStudent(await getCurrentUser(), teamId, str(fd, "email", 100), await appUrl());
+    revalidatePath(`/instructor/teams/${teamId}`);
+    if (r.draft) return "Invite added. It's sent when you publish.";
+    if (!r.delivered) throw new UserError(`Invite added, but the email didn't send${r.error ? `: ${r.error}` : "."} Use Copy link.`);
+    return "Invite sent.";
+  });
+}
+
+export async function removeMemberAction(teamId: number, userId: number, _: ActionState): Promise<ActionState> {
+  return attempt(async () => {
+    await removeMember(await getCurrentUser(), teamId, userId);
+    revalidatePath(`/instructor/teams/${teamId}`);
+    return "Removed.";
+  });
+}
+
+export async function cancelInviteAction(invitationId: number, teamId: number, _: ActionState): Promise<ActionState> {
+  return attempt(async () => {
+    await cancelInvitation(await getCurrentUser(), invitationId);
+    revalidatePath(`/instructor/teams/${teamId}`);
+    return "Invite cancelled.";
   });
 }

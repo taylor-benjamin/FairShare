@@ -3,12 +3,14 @@ import "server-only";
 import { randomToken } from "../auth/crypto";
 import { authorize } from "../permissions";
 import {
+  charters,
   courses,
   createDraftTeams,
   deleteDraftTeams,
   deleteProject as deleteProjectRows,
   deleteTeam as deleteTeamRows,
   invitations,
+  memberships,
   milestones,
   projects,
   teams,
@@ -17,8 +19,8 @@ import {
   type ProjectWithCourse,
 } from "../data/repo";
 import { sendEmail } from "../email";
-import { groupRosterByTeam, isIsoDate, parseRosterCsv } from "../rules";
-import type { AccessLevel, SessionUser } from "../types";
+import { groupRosterByTeam, isCharterComplete, isIsoDate, parseRosterCsv } from "../rules";
+import type { SessionUser } from "../types";
 import { authorizeTeam, NotFoundError, UserError } from "./common";
 
 export async function listTemplates(user: SessionUser | null) {
@@ -119,23 +121,18 @@ export async function importRoster(user: SessionUser | null, projectId: number, 
 }
 
 /** P07 — accept or adjust the template defaults. */
-export async function saveSettings(user: SessionUser | null, projectId: number, s: { anonymous: boolean; memberAccess: AccessLevel }) {
+export async function saveSettings(user: SessionUser | null, projectId: number, s: { anonymous: boolean }) {
   await getProject(user, projectId);
-  if (s.memberAccess !== "read" && s.memberAccess !== "write") throw new UserError("Pick what students can do in their channel.");
   await projects.saveSettings(projectId, s);
 }
 
 /** Plain-language lines describing the project's current settings (P07). */
-export function explainSettings(p: Pick<ProjectWithCourse, "anonymous_evals" | "member_access" | "default_member_access" | "default_anonymous_evals">) {
-  const access = p.member_access ?? p.default_member_access;
+export function explainSettings(p: Pick<ProjectWithCourse, "anonymous_evals" | "default_anonymous_evals">) {
   const anonymous = (p.anonymous_evals ?? p.default_anonymous_evals) === 1;
   return {
-    access,
     anonymous,
     lines: [
-      access === "write"
-        ? "Students can log work, confirm teammates' work, and edit their own team's charter. They can't see other teams."
-        : "Students can only read their team's channel. They can't log work or rate teammates. (Most classes want “can edit”.)",
+      "Students log their work, confirm teammates' work, and set their own role in the team charter. They can't see other teams.",
       "Only you can see evaluations. Students see the ratings they received, never the ratings their teammates gave each other.",
       anonymous
         ? "Ratings are anonymous: students never see who rated them."
@@ -259,3 +256,52 @@ export async function deleteTeam(user: SessionUser | null, teamId: number, typed
   return team;
 }
 
+
+// ── Team membership changes after publishing (#7) ────────────────────────────
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Invites one more student to an existing team and emails them (published teams only; drafts are emailed on publish). */
+export async function addStudent(user: SessionUser | null, teamId: number, emailRaw: string, appUrl: string) {
+  const { team } = await authorizeTeam(user, "team.manage", teamId);
+  const email = emailRaw.trim().toLowerCase();
+  if (!EMAIL_RE.test(email) || email.length > 100) throw new UserError("Enter the student's email address.");
+  const existingUser = await users.byEmail(email);
+  if (existingUser?.system_role === "instructor") throw new UserError("That email belongs to an instructor account.");
+  if (existingUser && (await memberships.forUser(teamId, existingUser.user_id))) throw new UserError("That student is already on this team.");
+  if ((await invitations.byTeam(teamId)).some((i) => i.invite_status === "pending" && i.invited_email.toLowerCase() === email)) {
+    throw new UserError("That student already has a pending invite. Use Copy link or Resend on the project page.");
+  }
+  const token = randomToken();
+  await invitations.create(teamId, email, token);
+  if (team.channel_status === "draft") return { delivered: false, draft: true as const };
+  const project = await getProject(user, team.project_id);
+  const result = await sendInviteEmail(project, team.team_name, { invited_email: email, invite_token: token }, appUrl);
+  return { ...result, draft: false as const };
+}
+
+/** Removes a student from a team. Their logged work stays in the log; their unfinished tasks become unassigned. */
+export async function removeMember(user: SessionUser | null, teamId: number, userId: number) {
+  await authorizeTeam(user, "team.manage", teamId);
+  if (!(await memberships.forUser(teamId, userId))) throw new NotFoundError("That student isn't on this team.");
+  await memberships.remove(teamId, userId);
+  // Removing the last student without a role can complete the charter.
+  const remaining = await memberships.byTeam(teamId);
+  if (await charters.byTeam(teamId)) await charters.setCompleted(teamId, isCharterComplete(remaining));
+}
+
+/** Cancels a pending invite so its link stops working. */
+export async function cancelInvitation(user: SessionUser | null, invitationId: number) {
+  const inv = Number.isInteger(invitationId) ? await invitations.byId(invitationId) : null;
+  if (!inv) throw new NotFoundError("That invite doesn't exist.");
+  await authorizeTeam(user, "team.manage", inv.team_id);
+  if (inv.invite_status !== "pending") throw new UserError("This invite was already used or cancelled.");
+  await invitations.expire(invitationId);
+}
+
+/** Members and pending invites for the instructor's team page. */
+export async function getTeamRoster(user: SessionUser | null, teamId: number) {
+  const { team } = await authorizeTeam(user, "team.manage", teamId);
+  const [members, invites] = await Promise.all([memberships.byTeam(teamId), invitations.byTeam(teamId)]);
+  return { team, members, pending: invites.filter((i) => i.invite_status === "pending") };
+}

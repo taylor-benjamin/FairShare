@@ -29,6 +29,7 @@ export interface UserRow {
   password_hash: string;
   system_role: SystemRole;
   created_date: string;
+  reset_requested_date: string | null; // migration 0003
 }
 
 export interface CourseRow {

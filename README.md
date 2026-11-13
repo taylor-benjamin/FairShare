@@ -50,7 +50,7 @@ The seed (`scripts/generate-seed.ts`) computes dates relative to *now*, so "no w
 ### Tests
 
 ```bash
-npm test          # Vitest: permission check for every role, business rules, crypto, password reset (42 tests)
+npm test          # Vitest: permission check for every role, business rules, crypto, password reset, sessions (44 tests)
 npm run lint      # TypeScript type check
 ```
 

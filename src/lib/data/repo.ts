@@ -30,6 +30,7 @@ export const users = {
   byId: (id: number) => first<UserRow>("SELECT * FROM users WHERE user_id = ?", id),
   byEmail: (email: string) => first<UserRow>("SELECT * FROM users WHERE email = ? COLLATE NOCASE", email.trim()),
   setRole: (userId: number, role: SystemRole) => run("UPDATE users SET system_role = ? WHERE user_id = ?", role, userId),
+  markResetRequested: (userId: number) => run("UPDATE users SET reset_requested_date = ? WHERE user_id = ?", now(), userId),
   setPassword: (userId: number, passwordHash: string) => run("UPDATE users SET password_hash = ? WHERE user_id = ?", passwordHash, userId),
   create: (u: { first_name: string; last_name: string; email: string; password_hash: string; system_role: SystemRole }) =>
     run(
@@ -41,6 +42,20 @@ export const users = {
       u.system_role,
       now(),
     ),
+};
+
+// ── Sessions (migration 0003) ────────────────────────────────────────────────
+
+export const sessions = {
+  create: (sessionId: string, userId: number, expiresIso: string) =>
+    run("INSERT INTO sessions (session_id, user_id, created_date, expires_date) VALUES (?, ?, ?, ?)", sessionId, userId, now(), expiresIso),
+  /** True only if the session row exists, belongs to the user, and hasn't expired. */
+  isValid: async (sessionId: string, userId: number) =>
+    !!(await first<{ n: number }>("SELECT 1 AS n FROM sessions WHERE session_id = ? AND user_id = ? AND expires_date > ?", sessionId, userId, now())),
+  remove: (sessionId: string) => run("DELETE FROM sessions WHERE session_id = ?", sessionId),
+  /** Ends every login for this user (password reset). */
+  removeAllForUser: (userId: number) => run("DELETE FROM sessions WHERE user_id = ?", userId),
+  removeExpiredForUser: (userId: number) => run("DELETE FROM sessions WHERE user_id = ? AND expires_date <= ?", userId, now()),
 };
 
 // ── Courses, templates, projects, milestones ─────────────────────────────────
@@ -93,8 +108,8 @@ export const projects = {
       p.anonymous_evals,
       p.member_access,
     ),
-  saveSettings: (projectId: number, s: { anonymous: boolean; memberAccess: AccessLevel }) =>
-    run("UPDATE projects SET anonymous_evals = ?, member_access = ? WHERE project_id = ?", s.anonymous ? 1 : 0, s.memberAccess, projectId),
+  saveSettings: (projectId: number, s: { anonymous: boolean }) =>
+    run("UPDATE projects SET anonymous_evals = ?, member_access = 'write' WHERE project_id = ?", s.anonymous ? 1 : 0, projectId),
 };
 
 export const milestones = {
@@ -149,10 +164,15 @@ export const memberships = {
        WHERE m.team_id = ? ORDER BY m.joined_date, u.first_name`,
       teamId,
     ),
-  setRole: (teamId: number, userId: number, role: string) =>
-    run("UPDATE team_memberships SET team_role = ?, role_confirmed = 0 WHERE team_id = ? AND user_id = ?", role, teamId, userId),
-  confirmRole: (teamId: number, userId: number) =>
-    run("UPDATE team_memberships SET role_confirmed = 1 WHERE team_id = ? AND user_id = ? AND team_role IS NOT NULL", teamId, userId),
+  /** A student sets their own charter role; setting it is their confirmation. */
+  setOwnRole: (teamId: number, userId: number, role: string) =>
+    run("UPDATE team_memberships SET team_role = ?, role_confirmed = 1 WHERE team_id = ? AND user_id = ?", role, teamId, userId),
+  /** #7: remove a student from a team. Their logged work stays in the log; their open tasks become unassigned. */
+  remove: (teamId: number, userId: number) =>
+    batch([
+      stmt("UPDATE tasks SET user_id = NULL WHERE team_id = ? AND user_id = ? AND task_status <> 'done'", teamId, userId),
+      stmt("DELETE FROM team_memberships WHERE team_id = ? AND user_id = ?", teamId, userId),
+    ]),
 };
 
 export const invitations = {
@@ -160,19 +180,37 @@ export const invitations = {
   byToken: (token: string) => first<InvitationRow>("SELECT * FROM invitations WHERE invite_token = ?", token),
   byTeam: (teamId: number) => all<InvitationRow>("SELECT * FROM invitations WHERE team_id = ? ORDER BY invited_email", teamId),
   /** Accepting marks the invite used and adds the membership in one transaction. */
-  accept: (invitationId: number, teamId: number, userId: number, accessLevel: AccessLevel) => {
+  accept: (invitationId: number, teamId: number, userId: number) => {
     const ts = now();
     return batch([
       stmt("UPDATE invitations SET invite_status = 'accepted', accepted_date = ? WHERE invitation_id = ? AND invite_status = 'pending'", ts, invitationId),
       stmt(
-        "INSERT OR IGNORE INTO team_memberships (team_id, user_id, access_level, role_confirmed, joined_date) VALUES (?, ?, ?, 0, ?)",
+        "INSERT OR IGNORE INTO team_memberships (team_id, user_id, access_level, role_confirmed, joined_date) VALUES (?, ?, 'write', 0, ?)",
         teamId,
         userId,
-        accessLevel,
         ts,
+      ),
+      // A new member hasn't set a role yet, so the charter is no longer complete.
+      stmt(
+        `UPDATE team_charters SET completed_date = NULL WHERE team_id = ?
+         AND EXISTS (SELECT 1 FROM team_memberships WHERE team_id = ? AND user_id = ? AND team_role IS NULL)`,
+        teamId,
+        teamId,
+        userId,
       ),
     ]);
   },
+  /** #7: invite one more student to an existing team. */
+  create: (teamId: number, email: string, token: string) =>
+    run(
+      "INSERT INTO invitations (team_id, invited_email, invite_token, invite_status, date_received) VALUES (?, ?, ?, 'pending', ?)",
+      teamId,
+      email,
+      token,
+      now(),
+    ),
+  /** #7: cancel a pending invite (its link stops working). */
+  expire: (invitationId: number) => run("UPDATE invitations SET invite_status = 'expired' WHERE invitation_id = ? AND invite_status = 'pending'", invitationId),
 };
 
 /** Creates draft teams and their pending invitations in one transaction (P06). */
@@ -367,6 +405,30 @@ export const contributions = {
     ),
   setStatus: (contributionId: number, status: VerificationStatus) =>
     run("UPDATE contributions SET verification_status = ? WHERE contribution_id = ?", status, contributionId),
+  /**
+   * Records a confirm and, in the same transaction, marks the entry confirmed once confirms are a strict
+   * majority of the other members. Counting inside the batch means simultaneous confirms can't miss each other.
+   * (Same rule as nextVerificationStatus in rules.ts.)
+   */
+  recordConfirm: (contributionId: number, verifierId: number, otherMemberCount: number) =>
+    batch([
+      stmt(
+        "INSERT INTO verifications (contribution_id, verifier_id, decision, reason, decision_date) VALUES (?, ?, 'confirm', NULL, ?)",
+        contributionId,
+        verifierId,
+        now(),
+      ),
+      stmt(
+        `UPDATE contributions SET verification_status = 'confirmed'
+         WHERE contribution_id = ? AND verification_status = 'pending'
+           AND ? > 0
+           AND (SELECT COUNT(*) FROM verifications WHERE contribution_id = ? AND decision = 'confirm') * 2 > ?`,
+        contributionId,
+        otherMemberCount,
+        contributionId,
+        otherMemberCount,
+      ),
+    ]),
   /** A dispute decision, the instructor's dispute case, and the disputed status — all in one transaction. */
   recordDispute: (contributionId: number, verifierId: number, reason: string) => {
     const ts = now();

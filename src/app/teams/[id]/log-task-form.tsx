@@ -6,18 +6,34 @@ import { SubmitButton } from "@/components/forms";
 import { Field } from "@/components/ui";
 
 /** P09 — the under-a-minute log form. Only "What did you do?" is required; today's date is pre-filled. */
-export function LogTaskForm({ action: serverAction, tasks, today }: { action: (prev: ActionState, fd: FormData) => Promise<ActionState>; tasks: { task_id: number; task_title: string }[]; today: string }) {
+/** Today's date on the student's own device (YYYY-MM-DD), not the server's UTC date. */
+function localToday(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+export function LogTaskForm({ action: serverAction, tasks }: { action: (prev: ActionState, fd: FormData) => Promise<ActionState>; tasks: { task_id: number; task_title: string }[] }) {
   // `action` is bound on the server (logTaskAction.bind(null, teamId)) so the team id can't be altered in the browser.
   const [state, action] = useActionState(serverAction, {});
   const ref = useRef<HTMLFormElement>(null);
   const [taskId, setTaskId] = useState("");
+  // Filled in on the device after it loads, so the default is the student's local "today".
+  const [today, setToday] = useState("");
+  const [date, setDate] = useState("");
   const fe = state.fieldErrors ?? {};
   const v = state.values ?? {};
+
+  useEffect(() => {
+    const t = localToday();
+    setToday(t);
+    setDate((d) => d || t);
+  }, []);
 
   useEffect(() => {
     if (state.ok) {
       ref.current?.reset();
       setTaskId("");
+      setDate(localToday());
     }
   }, [state.stamp, state.ok]);
 
@@ -60,10 +76,10 @@ export function LogTaskForm({ action: serverAction, tasks, today }: { action: (p
             id="completionDate"
             name="completionDate"
             type="date"
-            max={today}
+            max={today || undefined}
             className="field-input"
-            defaultValue={v.completionDate || today}
-            key={`c-${state.stamp ?? 0}`}
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
             aria-invalid={!!fe.completionDate}
           />
         </Field>

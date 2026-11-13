@@ -20,14 +20,13 @@ export default async function TeamChannelPage({ params }: { params: Promise<{ id
   }
   const { feed, canWrite, myTasks } = channel;
   const needsReview = feed.filter((c) => c.canVerify).length;
-  const today = new Date().toISOString().slice(0, 10);
 
   return (
     <Page>
       <div className={canWrite ? "grid gap-8 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]" : ""}>
         {canWrite && (
           <section aria-label="Log a completed task" className="md:sticky md:top-16 md:self-start">
-            <LogTaskForm action={logTaskAction.bind(null, teamId)} tasks={myTasks} today={today} />
+            <LogTaskForm action={logTaskAction.bind(null, teamId)} tasks={myTasks} />
           </section>
         )}
 

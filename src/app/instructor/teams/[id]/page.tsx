@@ -1,11 +1,15 @@
 import Link from "next/link";
-import { deleteTeamAction, finishTeamAction, reassignAction } from "@/app/actions/instructor";
+import { addStudentAction, cancelInviteAction, deleteTeamAction, finishTeamAction, reassignAction, removeMemberAction, resendInviteAction } from "@/app/actions/instructor";
+import { appUrl } from "@/app/actions/helpers";
+import { ConfirmAction } from "@/components/confirm-action";
+import { CopyLink } from "@/components/copy-link";
 import { DangerZone } from "@/components/danger-zone";
 import { handlePageError } from "@/components/access-denied";
 import { ContributionCard } from "@/components/contribution-card";
 import { ActionForm, SubmitButton } from "@/components/forms";
 import { ArrowIcon, Chip, EmptyState, Field, formatDate, HeaderBar, Page } from "@/components/ui";
 import { requireUser } from "@/lib/auth/session";
+import { getTeamRoster } from "@/lib/services/class-setup";
 import { getChannel } from "@/lib/services/contribution-service";
 import { teamRatings } from "@/lib/services/peer-evaluation";
 import { getReassignments, teamSignals } from "@/lib/services/team-health";
@@ -15,12 +19,13 @@ export const metadata = { title: "Team" };
 export default async function InstructorTeamPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser(["instructor"]);
   const teamId = Number((await params).id);
-  let channel, results, history, signal;
+  let channel, results, history, signal, roster;
   try {
-    [channel, results, history] = await Promise.all([
+    [channel, results, history, roster] = await Promise.all([
       getChannel(user, teamId),
       teamRatings(user, teamId),
       getReassignments(user, teamId),
+      getTeamRoster(user, teamId),
     ]);
     signal = (await teamSignals(user, channel.team.project_id)).find((s) => s.teamId === teamId);
   } catch (e) {
@@ -28,6 +33,7 @@ export default async function InstructorTeamPage({ params }: { params: Promise<{
   }
   const { team, feed, tasks, members } = channel;
   const assignedTasks = tasks.filter((t) => t.user_id !== null);
+  const base = await appUrl();
 
   return (
     <>
@@ -67,6 +73,62 @@ export default async function InstructorTeamPage({ params }: { params: Promise<{
             </p>
           </div>
         )}
+
+        {/* Members: add a late student, remove one, or cancel an invite (#7) */}
+        <section className="mb-10">
+          <h2 className="text-heading">Members</h2>
+          <ul className="card mt-3 divide-y divide-line overflow-hidden">
+            {roster.members.length === 0 && roster.pending.length === 0 && <li className="px-4 py-3 text-small text-hint">No students yet.</li>}
+            {roster.members.map((m) => (
+              <li key={m.user_id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5">
+                <span className="min-w-0">
+                  <span className="block truncate">
+                    {m.first_name} {m.last_name}
+                    {m.team_role && <span className="text-small text-hint"> · {m.team_role}</span>}
+                  </span>
+                  <span className="block truncate text-small text-hint">{m.email}</span>
+                </span>
+                <ConfirmAction
+                  action={removeMemberAction.bind(null, teamId, m.user_id)}
+                  label="Remove"
+                  pendingText="Removing…"
+                  confirm={`Remove ${m.first_name} ${m.last_name} from ${team.team_name}? Their logged work stays in the log.`}
+                />
+              </li>
+            ))}
+            {roster.pending.map((i) => (
+              <li key={i.invitation_id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5">
+                <span className="min-w-0">
+                  <span className="block truncate">{i.invited_email}</span>
+                  <span className="block text-small text-hint">Invited</span>
+                </span>
+                {team.channel_status !== "draft" && (
+                  <span className="flex flex-wrap items-center gap-1">
+                    <CopyLink url={`${base}/invite/${i.invite_token}`} />
+                    <ActionForm action={resendInviteAction.bind(null, i.invitation_id, team.project_id)} className="inline-flex items-center gap-2">
+                      <SubmitButton variant="ghost" small pendingText="Sending…" className="!border-0 !px-2.5 !py-1 !text-primary hover:!bg-primary-tint">
+                        Resend
+                      </SubmitButton>
+                    </ActionForm>
+                    <ConfirmAction action={cancelInviteAction.bind(null, i.invitation_id, teamId)} label="Cancel" pendingText="Cancelling…" confirm={`Cancel the invite for ${i.invited_email}? The link will stop working.`} />
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+          <ActionForm action={addStudentAction.bind(null, teamId)} resetOnSuccess className="mt-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+              <div className="flex-1">
+                <Field label="Add a student" htmlFor="add-email" hint="They get an invite to join this team.">
+                  <input id="add-email" name="email" type="email" maxLength={100} placeholder="student@school.edu" className="field-input" />
+                </Field>
+              </div>
+              <SubmitButton pendingText="Adding…" className="sm:mb-6">
+                Add student
+              </SubmitButton>
+            </div>
+          </ActionForm>
+        </section>
 
         <div className="grid gap-10 lg:grid-cols-2">
           {/* Peer ratings with names: instructor only */}

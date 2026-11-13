@@ -70,3 +70,17 @@ describe("password-reset tokens", () => {
     expect(await verifyResetToken(session, secret, 1_000_000_000)).toBeNull();
   });
 });
+
+describe("server-side session ids", () => {
+  const secret = "test-secret-test-secret-test-secret";
+
+  it("carries the session id through the signed cookie", async () => {
+    const token = await signSession({ uid: 3, sid: "abcdefghijklmnopqrstuvwxyz", exp: 2_000_000_000 }, secret);
+    expect(await verifySession(token, secret, 1_000_000_000)).toEqual({ uid: 3, sid: "abcdefghijklmnopqrstuvwxyz", exp: 2_000_000_000 });
+  });
+
+  it("rejects a session id that isn't a string", async () => {
+    const token = await signSession({ uid: 3, sid: 42 as unknown as string, exp: 2_000_000_000 }, secret);
+    expect(await verifySession(token, secret, 1_000_000_000)).toBeNull();
+  });
+});

@@ -21,27 +21,19 @@ async function refreshCharterCompletion(teamId: number) {
   if (charter) await charters.setCompleted(teamId, isCharterComplete(members));
 }
 
-export async function saveCharter(user: SessionUser | null, teamId: number, input: { goals: string; expectations: string; roles: Record<number, string> }) {
+/** Saves the shared goals/expectations and the signed-in student's own role (setting it confirms it). */
+export async function saveCharter(user: SessionUser | null, teamId: number, input: { goals: string; expectations: string; myRole: string }) {
   await authorizeTeam(user, "team.write", teamId);
   if (!input.goals) throw new UserError("Write at least one team goal.");
   if (!input.expectations) throw new UserError("Write down how you'll communicate and hit deadlines.");
   if (input.goals.length > 2000 || input.expectations.length > 2000) throw new UserError("Keep goals and expectations under 2,000 characters each.");
 
-  await charters.upsert(teamId, input.goals, input.expectations);
-  const members = await memberships.byTeam(teamId);
-  for (const m of members) {
-    const role = (input.roles[m.user_id] ?? "").trim().slice(0, 50);
-    if (role && role !== m.team_role) await memberships.setRole(teamId, m.user_id, role); // a changed role must be re-confirmed
-  }
-  await refreshCharterCompletion(teamId);
-}
+  const myRole = input.myRole.trim().slice(0, 50);
+  if (!myRole) throw new UserError("Enter your role on the team.");
 
-export async function confirmMyRole(user: SessionUser | null, teamId: number) {
-  await authorizeTeam(user, "team.write", teamId);
-  const me = await memberships.forUser(teamId, user!.userId);
-  if (!me?.team_role) throw new UserError("Your team hasn't given you a role yet. Add it in the charter first.");
-  if (!(await charters.byTeam(teamId))) throw new UserError("Save the charter's goals and expectations first.");
-  await memberships.confirmRole(teamId, user!.userId);
+  await charters.upsert(teamId, input.goals, input.expectations);
+  // Students only ever set their own role; teammates' roles are theirs to choose.
+  await memberships.setOwnRole(teamId, user!.userId, myRole);
   await refreshCharterCompletion(teamId);
 }
 
@@ -98,7 +90,7 @@ export async function teamSignals(user: SessionUser | null, projectId: number, a
       const live = t.channel_status === "published";
       const inactive = live
         ? inactiveMembers(
-            members.map((m) => ({ userId: m.user_id, name: fullName(m), lastLoggedDate: lastById.get(m.user_id) ?? null })),
+            members.filter((m) => m.access_level === "write").map((m) => ({ userId: m.user_id, name: fullName(m), lastLoggedDate: lastById.get(m.user_id) ?? null })),
             at,
           ).filter((m) => {
             const joined = members.find((x) => x.user_id === m.userId)?.joined_date;

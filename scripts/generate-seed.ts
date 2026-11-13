@@ -80,6 +80,7 @@ async function main() {
     "milestones",
     "projects",
     "courses",
+    "sessions",
     "users",
   ]) {
     lines.push(`DELETE FROM ${t};`);

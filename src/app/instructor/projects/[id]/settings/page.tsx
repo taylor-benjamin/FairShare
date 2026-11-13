@@ -58,15 +58,6 @@ export default async function SettingsPage({ params, searchParams }: { params: P
         </div>
 
         <ActionForm action={saveSettingsAction.bind(null, projectId)} className="space-y-6">
-          <fieldset className="space-y-2">
-            <legend className="font-semibold">What can students do in their team channel?</legend>
-            <Option name="memberAccess" value="write" checked={settings.access === "write"} title="Log and confirm work (recommended)">
-              Students can edit their own team&apos;s work log and charter, and rate teammates.
-            </Option>
-            <Option name="memberAccess" value="read" checked={settings.access === "read"} title="Read only">
-              Students can only look. Use this if you&apos;ll log work for them.
-            </Option>
-          </fieldset>
 
           <fieldset className="space-y-2">
             <legend className="font-semibold">Should peer ratings be anonymous?</legend>

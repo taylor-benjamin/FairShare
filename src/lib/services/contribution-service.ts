@@ -2,7 +2,7 @@
 import "server-only";
 import { authorize, can } from "../permissions";
 import { contributions, disputes, memberships, tasks, type FeedRow } from "../data/repo";
-import { isIsoDate, nextVerificationStatus, statusAfterDisputeResolution, validateHours } from "../rules";
+import { isIsoDate, statusAfterDisputeResolution, validateHours } from "../rules";
 import type { SessionUser, TaskStatus } from "../types";
 import { authorizeTeam, NotFoundError, shortName, UserError } from "./common";
 
@@ -71,7 +71,8 @@ export async function logContribution(user: SessionUser | null, teamId: number, 
   const hours = validateHours(input.hours);
   if (hours.error) errors.hours = hours.error;
   if (!isIsoDate(input.completionDate)) errors.completionDate = "Pick the date you finished.";
-  else if (input.completionDate > new Date(Date.now() + 36 * 3600 * 1000).toISOString().slice(0, 10)) {
+  // The latest local date anywhere on Earth is UTC+14, so nothing past that can be "today" for anyone.
+  else if (input.completionDate > new Date(Date.now() + 14 * 3600 * 1000).toISOString().slice(0, 10)) {
     errors.completionDate = "That date is in the future.";
   }
   if (input.taskId !== null) {
@@ -103,8 +104,8 @@ export async function verifyContribution(user: SessionUser | null, contributionI
   await authorizeTeam(user, "team.write", c.team_id);
   if (c.user_id === user!.userId) throw new UserError("You can't confirm or dispute your own work.");
   if (c.verification_status !== "pending") throw new UserError("This entry has already been settled.");
-  const existing = await contributions.decisionsFor(contributionId);
   const reason = reasonRaw.trim().slice(0, 255);
+  const others = (await memberships.byTeam(c.team_id)).filter((m) => m.access_level === "write" && m.user_id !== c.user_id).length;
 
   try {
     if (decision === "dispute") {
@@ -112,15 +113,11 @@ export async function verifyContribution(user: SessionUser | null, contributionI
       await contributions.recordDispute(contributionId, user!.userId, reason);
       return;
     }
-    await contributions.addVerification(contributionId, user!.userId, "confirm", null);
+    await contributions.recordConfirm(contributionId, user!.userId, others);
   } catch (e) {
     if (e instanceof Error && /UNIQUE/i.test(e.message)) throw new UserError("You've already responded to this entry.");
     throw e;
   }
-
-  const writers = (await memberships.byTeam(c.team_id)).filter((m) => m.access_level === "write" && m.user_id !== c.user_id);
-  const status = nextVerificationStatus(writers.length, [...existing.map((d) => d.decision), "confirm"]);
-  if (status !== c.verification_status) await contributions.setStatus(contributionId, status);
 }
 
 // ── Disputes (P11) ───────────────────────────────────────────────────────────

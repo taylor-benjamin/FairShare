@@ -4,7 +4,7 @@ Choices made where the build spec or the Milestone 1/2 documents were silent, am
 
 ## Data model
 
-1. **`projects.member_access` (migration 0002).** P07 lets the instructor change the template's default student access, but the Milestone 2 schema only stores `anonymous_evals` on `projects`. A nullable `member_access` column holds the choice (NULL = template default). Kept in its own migration so the deviation from the data dictionary is visible.
+1. **`projects.member_access` (migration 0002).** Originally held the instructor's choice of student access. The "Read only" option was removed (Nov 2026): every student can log and confirm work, so the column is always `write`. There are two account types: **instructor** (admin/teacher) and **student** (user); students choose their project role in the team charter.
 2. **Invitations don't store names.** The roster CSV has first/last names, but `invitations` only has `invited_email` (per the data dictionary). Students type their name when they accept the invite. If you'd rather prefill it, add `invited_first_name`/`invited_last_name` to `invitations`.
 3. **Extra integrity constraints:** `UNIQUE(project_id, team_name)` on teams; a trigger stops a verifier confirming their own contribution; disputes require a reason (`CHECK`); a completed milestone must have a completion date; `UNIQUE(milestone_id, team_id, rater_id, flag_type)` on flags so re-running the checks never duplicates them.
 4. **Emails are stored lower-case and compared case-insensitively.**
@@ -54,3 +54,12 @@ Choices made where the build spec or the Milestone 1/2 documents were silent, am
 30. **Deletes are explicit and all-or-nothing.** The schema has no `ON DELETE CASCADE`, so `repo.deleteTeam` / `repo.deleteProject` remove child rows in dependency order (flags, ratings, disputes, verifications, work log, reassignments, tasks, charter, invites, memberships, team; then milestones and the project) in one D1 batch.
 31. **What is kept:** user accounts (a student may be on other teams) and the course (so a new project can reuse it).
 32. **Deleting requires typing the exact name**, and the server re-checks it.
+
+## Bug fixes (Nov 2026)
+
+33. **Server-side sessions (migration 0003).** The cookie carries a signed session id that must match a `sessions` row. Log out deletes the row, so a copied cookie stops working; a password reset deletes all of the user's sessions. Cookies from before this change are rejected once, so everyone signs in again.
+34. **Password-reset emails are limited to one per address every 5 minutes** (`users.reset_requested_date`). The page shows the same message either way.
+35. **Confirms are counted inside the same database transaction** that records them (`contributions.recordConfirm`), so simultaneous confirms can't leave an entry stuck at "pending".
+36. **Students set only their own charter role**, and setting it confirms it. Goals and expectations stay shared. A new member makes the charter incomplete until they set their role; removing a member re-checks it.
+37. **Instructors can add a student to a published team, remove a member, or cancel a pending invite** from the team page. A removed student's logged work stays in the log, and their unfinished tasks become unassigned.
+38. **"Completed on" defaults to the student's own local date**, set in the browser. The server accepts dates up to the latest local date anywhere (UTC+14), not 36 hours ahead.

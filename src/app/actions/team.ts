@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth/session";
 import { addTask, logContribution, setTaskStatus, verifyContribution } from "@/lib/services/contribution-service";
 import { submitRatings } from "@/lib/services/peer-evaluation";
-import { confirmMyRole, saveCharter } from "@/lib/services/team-health";
+import { saveCharter } from "@/lib/services/team-health";
 import { UserError } from "@/lib/services/common";
 import type { ActionState } from "@/lib/action-state";
 import type { TaskStatus } from "@/lib/types";
@@ -61,24 +61,12 @@ export async function taskStatusAction(taskId: number, teamId: number, _: Action
 
 export async function saveCharterAction(teamId: number, _: ActionState, fd: FormData): Promise<ActionState> {
   return attempt(async () => {
-    const roles: Record<number, string> = {};
-    for (const [k, v] of fd.entries()) {
-      const m = /^role_(\d+)$/.exec(k);
-      if (m) roles[Number(m[1])] = String(v);
-    }
-    await saveCharter(await getCurrentUser(), teamId, { goals: str(fd, "goals", 2000), expectations: str(fd, "expectations", 2000), roles });
+    await saveCharter(await getCurrentUser(), teamId, { goals: str(fd, "goals", 2000), expectations: str(fd, "expectations", 2000), myRole: str(fd, "myRole", 50) });
     revalidatePath(`/teams/${teamId}/charter`);
     return "Charter saved.";
   });
 }
 
-export async function confirmRoleAction(teamId: number, _: ActionState): Promise<ActionState> {
-  return attempt(async () => {
-    await confirmMyRole(await getCurrentUser(), teamId);
-    revalidatePath(`/teams/${teamId}/charter`);
-    return "Role confirmed.";
-  });
-}
 
 /** P15 — rate every teammate for a completed milestone. */
 export async function submitRatingsAction(teamId: number, milestoneId: number, _: ActionState, fd: FormData): Promise<ActionState> {

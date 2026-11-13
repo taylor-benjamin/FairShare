@@ -56,6 +56,8 @@ export async function verifyPassword(password: string, stored: string): Promise<
 export interface SessionPayload {
   uid: number;
   exp: number; // unix seconds
+  /** Server-side session id; the session is valid only while its row exists (see sessions table). */
+  sid?: string;
 }
 
 async function hmacKey(secret: string): Promise<CryptoKey> {
@@ -81,6 +83,7 @@ export async function verifySession(token: string, secret: string, nowSeconds = 
   try {
     const payload = JSON.parse(new TextDecoder().decode(fromBase64Url(body))) as SessionPayload & { p?: unknown };
     if (typeof payload.uid !== "number" || typeof payload.exp !== "number" || payload.exp < nowSeconds) return null;
+    if (payload.sid !== undefined && typeof payload.sid !== "string") return null;
     if (payload.p !== undefined) return null; // a purpose-tagged token (e.g. password reset) is never a session
     return payload;
   } catch {

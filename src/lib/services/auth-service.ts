@@ -1,14 +1,15 @@
 // Authentication service: sign-up, log-in, password reset, invite acceptance (P02, P08).
 import "server-only";
 import { hashPassword, passwordFingerprint, signResetToken, verifyPassword, verifyResetToken } from "../auth/crypto";
-import { endSession, startSession, toSessionUser } from "../auth/session";
-import { invitations, projects, users } from "../data/repo";
+import { endAllSessions, endSession, startSession, toSessionUser } from "../auth/session";
+import { invitations, users } from "../data/repo";
 import { sendEmail } from "../email";
 import { sessionSecret } from "../env";
 import type { SessionUser } from "../types";
 import { loadTeam, UserError } from "./common";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const RESET_COOLDOWN_MS = 5 * 60 * 1000;
 // A real hash to compare against when the email is unknown, so response time doesn't reveal which emails exist.
 let dummyHash: string | null = null;
 
@@ -54,6 +55,9 @@ export async function requestPasswordReset(emailRaw: string, appUrl: string): Pr
   if (!EMAIL_RE.test(email) || email.length > 100) throw new UserError("Please enter the email address you log in with.");
   const row = await users.byEmail(email);
   if (!row) return;
+  // At most one reset email per address every few minutes (same message either way, so nothing leaks).
+  if (row.reset_requested_date && Date.now() - new Date(row.reset_requested_date).getTime() < RESET_COOLDOWN_MS) return;
+  await users.markResetRequested(row.user_id);
   const token = await signResetToken(row.user_id, row.password_hash, sessionSecret());
   await sendEmail({
     to: row.email,
@@ -85,6 +89,7 @@ export async function resetPassword(token: string, password: string, confirm: st
   checkPassword(password);
   if (password !== confirm) throw new UserError("The two passwords don't match.");
   await users.setPassword(row.user_id, await hashPassword(password));
+  await endAllSessions(row.user_id); // log out every other device
   await startSession(row.user_id);
   return toSessionUser(row);
 }
@@ -172,9 +177,7 @@ export async function acceptInvite(token: string, input: { firstName: string; la
     user = await users.byId(id);
   }
 
-  const project = await projects.byId(team.project_id);
-  const accessLevel = project?.member_access ?? project?.default_member_access ?? "write";
-  await invitations.accept(inv.invitation_id, team.team_id, user!.user_id, accessLevel);
+  await invitations.accept(inv.invitation_id, team.team_id, user!.user_id);
   await startSession(user!.user_id);
   return team.team_id;
 }

@@ -57,8 +57,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
           <section className="card mx-auto mb-8 max-w-2xl border-primary p-5">
             <h2 className="text-heading">Ready to publish {drafts.length} team channel{drafts.length === 1 ? "" : "s"}</h2>
             <p className="mt-1 text-hint">
-              Each student gets an email with a one-time sign-up link that puts them straight into their team. Settings: students{" "}
-              {settings.access === "write" ? "can log and confirm work" : "have read-only access"}; ratings are {settings.anonymous ? "anonymous" : "named"}.{" "}
+              Each student gets an email with a one-time sign-up link that puts them straight into their team. Ratings are {settings.anonymous ? "anonymous" : "named"}.{" "}
               <Link href={`/instructor/projects/${projectId}/settings`} className="link">
                 Change
               </Link>
