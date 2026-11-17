@@ -95,6 +95,7 @@ export default async function RatingsPage({ params }: { params: Promise<{ id: st
                     <input id={`comment_${t.user_id}`} name={`comment_${t.user_id}`} placeholder="Optional comment for your instructor" maxLength={1000} className="field-input text-small" />
                   </fieldset>
                 ))}
+                <p className="text-small text-hint">1 = didn&apos;t contribute · 3 = met expectations · 5 = outstanding</p>
                 <SubmitButton full pendingText="Submitting…">
                   Submit ratings
                 </SubmitButton>
