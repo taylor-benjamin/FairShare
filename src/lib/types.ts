@@ -120,6 +120,12 @@ export interface TaskRow {
   task_title: string;
   due_date: string | null;
   task_status: TaskStatus;
+  /** Set when the task is deleted (migration 0005). Deleted tasks are hidden but kept for the task history. */
+  deleted_by_id: number | null;
+  deleted_date: string | null;
+  /** Set while a teammate is asking the owner to approve deleting it. */
+  delete_requested_by_id: number | null;
+  delete_requested_date: string | null;
 }
 
 export interface ContributionRow {

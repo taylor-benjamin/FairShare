@@ -2,7 +2,7 @@
 import "server-only";
 import { authorize, can } from "../permissions";
 import { contributions, disputes, memberships, tasks, type FeedRow } from "../data/repo";
-import { isIsoDate, statusAfterDisputeResolution, validateHours } from "../rules";
+import { canAnswerDeleteRequest, isIsoDate, statusAfterDisputeResolution, taskDeleteMode, validateHours } from "../rules";
 import type { SessionUser, TaskStatus } from "../types";
 import { authorizeTeam, NotFoundError, shortName, UserError } from "./common";
 
@@ -47,7 +47,18 @@ export async function getChannel(user: SessionUser | null, teamId: number) {
     isInstructor: can(user, "team.manage", resource),
     members,
     feed: items,
-    tasks: teamTasks,
+    // Per task: whether this user can delete it, ask to, or answer a teammate's request (rules.ts).
+    tasks: teamTasks.map((t) => {
+      const forDelete = { ...t, has_work: t.has_work === 1 };
+      const pending = !forDelete.has_work && t.delete_requested_by_id !== null;
+      return {
+        ...t,
+        deleteMode: canWrite ? taskDeleteMode(forDelete, user!.userId) : null,
+        canAnswerDelete: canWrite && canAnswerDeleteRequest(forDelete, user!.userId),
+        deletePending: pending,
+        isMyDeleteRequest: pending && t.delete_requested_by_id === user!.userId,
+      };
+    }),
     myTasks: teamTasks.filter((t) => t.task_status !== "done" && (t.user_id === null || t.user_id === user!.userId)),
   };
 }
@@ -147,6 +158,49 @@ export async function addTask(user: SessionUser | null, teamId: number, input: {
   if (input.dueDate && !isIsoDate(input.dueDate)) throw new UserError("Pick a valid due date or leave it blank.");
   if (input.ownerId !== null && !(await memberships.forUser(teamId, input.ownerId))) throw new UserError("Pick someone on your team.");
   await tasks.create({ team_id: teamId, user_id: input.ownerId, task_title: input.title, due_date: input.dueDate || null, task_status: "to_do" });
+}
+
+// ── Deleting tasks added by mistake ──────────────────────────────────────────
+// The owner (or anyone, if nobody owns it) deletes directly; any other teammate asks the owner to approve.
+// A task with logged work can never be deleted. Deleting hides the task and records who did it (task history).
+
+const HAS_WORK = "Work has been logged on this task, so it can't be deleted. Mark it done instead.";
+
+async function loadTaskForDelete(user: SessionUser | null, taskId: number) {
+  const row = await tasks.byIdWithWork(taskId);
+  if (!row) throw new NotFoundError("That task doesn't exist.");
+  await authorizeTeam(user, "team.write", row.team_id);
+  return { ...row, has_work: row.has_work === 1 };
+}
+
+/** Deletes the task, or asks its owner to approve. Returns which one happened. */
+export async function deleteTask(user: SessionUser | null, taskId: number): Promise<"deleted" | "requested"> {
+  const task = await loadTaskForDelete(user, taskId);
+  const mode = taskDeleteMode(task, user!.userId);
+  if (mode === null) throw new UserError(HAS_WORK);
+  if (mode === "request") {
+    if (!(await tasks.requestDelete(taskId, user!.userId))) throw new UserError("Someone already asked to delete this task.");
+    return "requested";
+  }
+  if (!(await tasks.softDeleteIfNoWork(taskId, user!.userId))) throw new UserError(HAS_WORK);
+  return "deleted";
+}
+
+/** The owner approves (the task is deleted) or declines a teammate's request. */
+export async function answerDeleteRequest(user: SessionUser | null, taskId: number, approve: boolean) {
+  const task = await loadTaskForDelete(user, taskId);
+  if (!canAnswerDeleteRequest(task, user!.userId)) {
+    throw new UserError(task.has_work ? HAS_WORK : "There's no delete request for you to answer on this task.");
+  }
+  if (!approve) return tasks.clearDeleteRequest(taskId);
+  if (!(await tasks.softDeleteIfNoWork(taskId, user!.userId))) throw new UserError(HAS_WORK);
+}
+
+/** The teammate who asked takes their request back. */
+export async function cancelDeleteRequest(user: SessionUser | null, taskId: number) {
+  const task = await loadTaskForDelete(user, taskId);
+  if (task.delete_requested_by_id !== user!.userId) throw new UserError("Only the person who asked can cancel this request.");
+  await tasks.clearDeleteRequest(taskId);
 }
 
 export async function setTaskStatus(user: SessionUser | null, taskId: number, status: TaskStatus) {

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth/session";
-import { addTask, logContribution, setTaskStatus, verifyContribution } from "@/lib/services/contribution-service";
+import { addTask, answerDeleteRequest, cancelDeleteRequest, deleteTask, logContribution, setTaskStatus, verifyContribution } from "@/lib/services/contribution-service";
 import { submitRatings } from "@/lib/services/peer-evaluation";
 import { agreeToCharter, reassignTask, reopenCharter, saveCharterText, saveMyRole } from "@/lib/services/team-health";
 import { UserError } from "@/lib/services/common";
@@ -56,6 +56,38 @@ export async function taskStatusAction(taskId: number, teamId: number, _: Action
   return attempt(async () => {
     await setTaskStatus(await getCurrentUser(), taskId, str(fd, "status") as TaskStatus);
     revalidatePath(`/teams/${teamId}/tasks`);
+  });
+}
+
+/** Deletes a task the user added, or asks its owner to approve the delete. */
+export async function deleteTaskAction(taskId: number, teamId: number, _: ActionState): Promise<ActionState> {
+  return attempt(async () => {
+    const result = await deleteTask(await getCurrentUser(), taskId);
+    revalidatePath(`/teams/${teamId}/tasks`);
+    revalidatePath(`/teams/${teamId}`);
+    revalidatePath("/teams");
+    return result === "deleted" ? "Task deleted." : "Request sent.";
+  });
+}
+
+/** The task owner approves or declines a teammate's request to delete it. */
+export async function answerDeleteRequestAction(taskId: number, teamId: number, _: ActionState, fd: FormData): Promise<ActionState> {
+  return attempt(async () => {
+    const approve = str(fd, "decision") === "approve";
+    await answerDeleteRequest(await getCurrentUser(), taskId, approve);
+    revalidatePath(`/teams/${teamId}/tasks`);
+    revalidatePath(`/teams/${teamId}`);
+    revalidatePath("/teams");
+    return approve ? "Task deleted." : "Request declined.";
+  });
+}
+
+export async function cancelDeleteRequestAction(taskId: number, teamId: number, _: ActionState): Promise<ActionState> {
+  return attempt(async () => {
+    await cancelDeleteRequest(await getCurrentUser(), taskId);
+    revalidatePath(`/teams/${teamId}/tasks`);
+    revalidatePath("/teams");
+    return "Request canceled.";
   });
 }
 

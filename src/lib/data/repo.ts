@@ -1,7 +1,7 @@
 // Repository functions: plain SQL with .bind() parameters. No permission logic lives here —
 // services decide *whether* to call these; this layer only knows *how* to read and write.
 import "server-only";
-import { all, batch, first, now, run, stmt } from "./client";
+import { all, batch, first, now, run, runCount, stmt } from "./client";
 import type {
   AccessLevel,
   CharterRow,
@@ -337,23 +337,58 @@ export const charters = {
       : run("UPDATE team_charters SET completed_date = NULL WHERE team_id = ?", teamId),
 };
 
-export type TaskWithOwner = TaskRow & { owner_first: string | null; owner_last: string | null };
+/** `has_work` is 1 when work has been logged on the task (then it can't be deleted). */
+export type TaskWithOwner = TaskRow & { owner_first: string | null; owner_last: string | null; requester_first: string | null; has_work: number };
+
+const taskHasWork = (taskIdColumn: string) => `EXISTS (SELECT 1 FROM contributions c WHERE c.task_id = ${taskIdColumn})`;
 
 export const tasks = {
-  byId: (id: number) => first<TaskRow>("SELECT * FROM tasks WHERE task_id = ?", id),
+  /** Deleted tasks are hidden everywhere except the task history. */
+  byId: (id: number) => first<TaskRow>("SELECT * FROM tasks WHERE task_id = ? AND deleted_date IS NULL", id),
   byTeam: (teamId: number) =>
     all<TaskWithOwner>(
-      `SELECT t.*, u.first_name AS owner_first, u.last_name AS owner_last FROM tasks t LEFT JOIN users u ON u.user_id = t.user_id
-       WHERE t.team_id = ? ORDER BY CASE t.task_status WHEN 'done' THEN 1 ELSE 0 END, t.due_date IS NULL, t.due_date, t.task_id`,
+      `SELECT t.*, u.first_name AS owner_first, u.last_name AS owner_last, rq.first_name AS requester_first, ${taskHasWork("t.task_id")} AS has_work
+       FROM tasks t LEFT JOIN users u ON u.user_id = t.user_id LEFT JOIN users rq ON rq.user_id = t.delete_requested_by_id
+       WHERE t.team_id = ? AND t.deleted_date IS NULL
+       ORDER BY CASE t.task_status WHEN 'done' THEN 1 ELSE 0 END, t.due_date IS NULL, t.due_date, t.task_id`,
       teamId,
     ),
-  create: (t: Omit<TaskRow, "task_id">) =>
+  /** The task plus whether work is logged on it, for the delete rules. */
+  byIdWithWork: (id: number) =>
+    first<TaskRow & { has_work: number }>(`SELECT t.*, ${taskHasWork("t.task_id")} AS has_work FROM tasks t WHERE t.task_id = ? AND t.deleted_date IS NULL`, id),
+  create: (t: Pick<TaskRow, "team_id" | "user_id" | "task_title" | "due_date" | "task_status">) =>
     run("INSERT INTO tasks (team_id, user_id, task_title, due_date, task_status) VALUES (?, ?, ?, ?, ?)", t.team_id, t.user_id, t.task_title, t.due_date, t.task_status),
   setStatus: (id: number, status: TaskRow["task_status"]) => run("UPDATE tasks SET task_status = ? WHERE task_id = ?", status, id),
+  /** Records a teammate's request to delete. Returns false if someone already asked. */
+  requestDelete: async (id: number, byId: number) =>
+    (await runCount(
+      "UPDATE tasks SET delete_requested_by_id = ?, delete_requested_date = ? WHERE task_id = ? AND deleted_date IS NULL AND delete_requested_by_id IS NULL",
+      byId,
+      now(),
+      id,
+    )) > 0,
+  clearDeleteRequest: (id: number) => run("UPDATE tasks SET delete_requested_by_id = NULL, delete_requested_date = NULL WHERE task_id = ?", id),
+  /** Hides the task and records who deleted it, only if no work is logged on it. Returns false otherwise. */
+  softDeleteIfNoWork: async (id: number, byId: number) =>
+    (await runCount(
+      `UPDATE tasks SET deleted_by_id = ?, deleted_date = ? WHERE task_id = ? AND deleted_date IS NULL AND NOT ${taskHasWork("tasks.task_id")}`,
+      byId,
+      now(),
+      id,
+    )) > 0,
+  /** Deleted tasks for the task history: who deleted it, and who asked if it was a teammate's request. */
+  deletionsByTeam: (teamId: number) =>
+    all<{ task_id: number; task_title: string; deleted_date: string; by_name: string; requester_name: string | null }>(
+      `SELECT t.task_id, t.task_title, t.deleted_date, ub.first_name || ' ' || ub.last_name AS by_name,
+              CASE WHEN t.delete_requested_by_id <> t.deleted_by_id THEN rq.first_name || ' ' || rq.last_name END AS requester_name
+       FROM tasks t JOIN users ub ON ub.user_id = t.deleted_by_id LEFT JOIN users rq ON rq.user_id = t.delete_requested_by_id
+       WHERE t.team_id = ? AND t.deleted_date IS NOT NULL`,
+      teamId,
+    ),
   /** P13 — move the task and record the history in one transaction. */
   reassign: (taskId: number, fromUserId: number, toUserId: number, byId: number, reason: string) =>
     batch([
-      stmt("UPDATE tasks SET user_id = ? WHERE task_id = ?", toUserId, taskId),
+      stmt("UPDATE tasks SET user_id = ?, delete_requested_by_id = NULL, delete_requested_date = NULL WHERE task_id = ?", toUserId, taskId),
       stmt(
         `INSERT INTO task_reassignments (task_id, from_user_id, to_user_id, reassigned_by_id, reassignment_reason, reassigned_date)
          VALUES (?, ?, ?, ?, ?, ?)`,
@@ -647,6 +682,17 @@ export const flags = {
 // ── Student dashboard: what's waiting for one student across their teams ─────
 
 export const studentDashboard = {
+  /** Tasks this student owns that a teammate has asked to delete, in published teams. */
+  deleteRequestsForMe: (userId: number) =>
+    all<{ team_id: number; task_id: number; task_title: string; requester_first: string }>(
+      `SELECT t.team_id, t.task_id, t.task_title, rq.first_name AS requester_first
+       FROM tasks t
+       JOIN teams tm ON tm.team_id = t.team_id AND tm.channel_status = 'published'
+       JOIN users rq ON rq.user_id = t.delete_requested_by_id
+       WHERE t.user_id = ? AND t.deleted_date IS NULL AND NOT ${taskHasWork("t.task_id")}
+       ORDER BY t.delete_requested_date`,
+      userId,
+    ),
   /** Teammates' pending entries this student hasn't confirmed or disputed yet, per team. */
   awaitingMyReview: (userId: number) =>
     all<{ team_id: number; n: number }>(

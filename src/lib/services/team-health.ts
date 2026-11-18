@@ -91,9 +91,19 @@ export async function reassignTask(user: SessionUser | null, taskId: number, toU
   await tasks.reassign(taskId, task.user_id, toUserId, user!.userId, reason);
 }
 
-export async function getReassignments(user: SessionUser | null, teamId: number) {
+export type TaskHistoryItem =
+  | ({ kind: "reassigned"; key: string; date: string } & Awaited<ReturnType<typeof tasks.reassignmentsByTeam>>[number])
+  | ({ kind: "deleted"; key: string; date: string } & Awaited<ReturnType<typeof tasks.deletionsByTeam>>[number]);
+
+/** Reassignments and deletions, newest first. Deleted tasks stay in this history. */
+export async function getTaskHistory(user: SessionUser | null, teamId: number): Promise<TaskHistoryItem[]> {
   await authorizeTeam(user, "team.read", teamId);
-  return tasks.reassignmentsByTeam(teamId);
+  const [moves, deletions] = await Promise.all([tasks.reassignmentsByTeam(teamId), tasks.deletionsByTeam(teamId)]);
+  const items: TaskHistoryItem[] = [
+    ...moves.map((r) => ({ ...r, kind: "reassigned" as const, key: `r-${r.reassignment_id}`, date: r.reassigned_date })),
+    ...deletions.map((d) => ({ ...d, kind: "deleted" as const, key: `d-${d.task_id}`, date: d.deleted_date })),
+  ];
+  return items.sort((a, b) => b.date.localeCompare(a.date));
 }
 
 // ── Instructor dashboard: "Needs your review" signals ────────────────────────

@@ -306,3 +306,26 @@ export function nextSetupStep(input: {
     };
   return null;
 }
+
+// ── Deleting tasks ───────────────────────────────────────────────────────────
+
+export interface TaskForDelete {
+  user_id: number | null; // owner
+  delete_requested_by_id: number | null;
+  /** Work has been logged on it. Such a task can never be deleted, so nobody's credit disappears. */
+  has_work: boolean;
+}
+
+/**
+ * What this user can do about deleting the task: "delete" (they own it, or nobody does),
+ * "request" (a teammate owns it, so the owner must approve), or null (work has been logged on it).
+ */
+export function taskDeleteMode(task: TaskForDelete, userId: number): "delete" | "request" | null {
+  if (task.has_work) return null;
+  return task.user_id === null || task.user_id === userId ? "delete" : "request";
+}
+
+/** Only the current owner answers a pending delete request, and only while no work is logged on the task. */
+export function canAnswerDeleteRequest(task: TaskForDelete, userId: number): boolean {
+  return !task.has_work && task.delete_requested_by_id !== null && task.user_id === userId;
+}

@@ -18,11 +18,12 @@ export async function getStudentDashboard(user: SessionUser | null) {
   // Every team still passes the single permission check before its data is shown.
   await Promise.all(myTeams.map((t) => authorizeTeam(user, "team.read", t.team_id)));
 
-  const [review, ratings, totals, recent] = await Promise.all([
+  const [review, ratings, totals, recent, deleteRequests] = await Promise.all([
     studentDashboard.awaitingMyReview(user.userId),
     studentDashboard.ratingsDue(user.userId),
     studentDashboard.myTotals(user.userId),
     studentDashboard.myRecent(user.userId),
+    studentDashboard.deleteRequestsForMe(user.userId),
   ]);
 
   const reviewBy = new Map(review.map((r) => [r.team_id, r.n]));
@@ -40,6 +41,10 @@ export async function getStudentDashboard(user: SessionUser | null) {
   for (const r of ratings) {
     const t = myTeams.find((x) => x.team_id === r.team_id);
     if (t) todos.push({ key: `rate-${r.team_id}-${r.milestone_id}`, label: `Rate your teammates for ${r.milestone_name}${inTeam(t.team_name)}`, href: `/teams/${t.team_id}/ratings`, tone: "review" });
+  }
+  for (const d of deleteRequests) {
+    const t = myTeams.find((x) => x.team_id === d.team_id);
+    if (t) todos.push({ key: `delete-${d.task_id}`, label: `${d.requester_first} asked to delete “${d.task_title}”${inTeam(t.team_name)}`, href: `/teams/${t.team_id}/tasks`, tone: "warning" });
   }
   for (const t of myTeams) {
     if (t.channel_status === "published" && !(t.role_confirmed && t.team_role)) {

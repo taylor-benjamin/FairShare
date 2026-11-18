@@ -1,10 +1,12 @@
-import { addTaskAction, reassignTaskAction, taskStatusAction } from "@/app/actions/team";
+import { addTaskAction, answerDeleteRequestAction, cancelDeleteRequestAction, deleteTaskAction, reassignTaskAction, taskStatusAction } from "@/app/actions/team";
+import { ConfirmAction } from "@/components/confirm-action";
 import { handlePageError } from "@/components/access-denied";
 import { ActionForm, SubmitButton } from "@/components/forms";
 import { EmptyState, Field, formatDate, Page } from "@/components/ui";
 import { requireUser } from "@/lib/auth/session";
 import { getChannel } from "@/lib/services/contribution-service";
-import { getReassignments } from "@/lib/services/team-health";
+import { getTaskHistory } from "@/lib/services/team-health";
+import { TaskHistoryList } from "@/components/task-history";
 import type { TaskStatus } from "@/lib/types";
 
 export const metadata = { title: "Tasks" };
@@ -21,7 +23,7 @@ export default async function TasksPage({ params }: { params: Promise<{ id: stri
   const teamId = Number((await params).id);
   let channel, history;
   try {
-    [channel, history] = await Promise.all([getChannel(user, teamId), getReassignments(user, teamId)]);
+    [channel, history] = await Promise.all([getChannel(user, teamId), getTaskHistory(user, teamId)]);
   } catch (e) {
     return handlePageError(e);
   }
@@ -89,6 +91,56 @@ export default async function TasksPage({ params }: { params: Promise<{ id: stri
                             ))}
                           </ActionForm>
                         )}
+                        {t.deletePending && (
+                          <div className="mt-3 rounded-xl bg-disputed-soft p-3 text-small">
+                            {t.canAnswerDelete ? (
+                              <>
+                                <p>{t.requester_first} asked to delete this task.</p>
+                                <ActionForm action={answerDeleteRequestAction.bind(null, t.task_id, teamId)} className="mt-2 flex flex-wrap gap-2">
+                                  <SubmitButton name="decision" value="approve" variant="secondary" small>
+                                    Approve delete
+                                  </SubmitButton>
+                                  <SubmitButton name="decision" value="decline" variant="ghost" small>
+                                    Decline
+                                  </SubmitButton>
+                                </ActionForm>
+                              </>
+                            ) : t.isMyDeleteRequest ? (
+                              <>
+                                <p>Waiting for {t.owner_first} to approve deleting it.</p>
+                                <ActionForm action={cancelDeleteRequestAction.bind(null, t.task_id, teamId)} className="mt-2">
+                                  <SubmitButton variant="ghost" small>
+                                    Cancel request
+                                  </SubmitButton>
+                                </ActionForm>
+                              </>
+                            ) : (
+                              <p>
+                                {t.requester_first} asked {t.owner_first} to delete this task.
+                              </p>
+                            )}
+                          </div>
+                        )}
+                        {t.deleteMode === "delete" && !t.canAnswerDelete && (
+                          <div className="mt-2">
+                            <ConfirmAction
+                              action={deleteTaskAction.bind(null, t.task_id, teamId)}
+                              label="Delete"
+                              pendingText="Deleting…"
+                              confirm={`Delete "${t.task_title}"? This can't be undone.`}
+                            />
+                          </div>
+                        )}
+                        {t.deleteMode === "request" && !t.deletePending && (
+                          <div className="mt-2">
+                            <ConfirmAction
+                              action={deleteTaskAction.bind(null, t.task_id, teamId)}
+                              label="Ask to delete"
+                              pendingText="Sending…"
+                              confirm={`${t.owner_first} owns "${t.task_title}". Ask them to approve deleting it?`}
+                            />
+                          </div>
+                        )}
                         {canWrite && t.user_id !== null && members.length > 1 && (
                           <details className="mt-3">
                             <summary className="cursor-pointer text-small text-hint">Reassign</summary>
@@ -125,17 +177,8 @@ export default async function TasksPage({ params }: { params: Promise<{ id: stri
 
       {history.length > 0 && (
         <div className="mt-8 max-w-3xl">
-          <p className="section-label mb-3">Reassignment history</p>
-          <ul className="space-y-2">
-            {history.map((r) => (
-              <li key={r.reassignment_id} className="rounded-xl bg-wash p-3.5 text-small">
-                <span className="font-semibold">{r.task_title}</span>: {r.from_name} → {r.to_name} · {formatDate(r.reassigned_date)}
-                <span className="block text-hint">
-                  {r.by_role === "instructor" ? "By your instructor" : `By ${r.by_name}`}: {r.reassignment_reason}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <p className="section-label mb-3">Task history</p>
+          <TaskHistoryList items={history} viewer="student" />
         </div>
       )}
     </Page>

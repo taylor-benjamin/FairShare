@@ -12,7 +12,8 @@ import { requireUser } from "@/lib/auth/session";
 import { getTeamRoster } from "@/lib/services/class-setup";
 import { getChannel } from "@/lib/services/contribution-service";
 import { teamRatings } from "@/lib/services/peer-evaluation";
-import { getReassignments, teamSignals } from "@/lib/services/team-health";
+import { getTaskHistory, teamSignals } from "@/lib/services/team-health";
+import { TaskHistoryList } from "@/components/task-history";
 
 export const metadata = { title: "Team" };
 
@@ -26,7 +27,7 @@ export default async function InstructorTeamPage({ params, searchParams }: { par
   const tab: Tab = TABS.includes(tabParam as Tab) ? (tabParam as Tab) : "overview";
   let channel, results, history, signal, roster;
   try {
-    [channel, results, history, roster] = await Promise.all([getChannel(user, teamId), teamRatings(user, teamId), getReassignments(user, teamId), getTeamRoster(user, teamId)]);
+    [channel, results, history, roster] = await Promise.all([getChannel(user, teamId), teamRatings(user, teamId), getTaskHistory(user, teamId), getTeamRoster(user, teamId)]);
     signal = (await teamSignals(user, channel.team.project_id)).find((s) => s.teamId === teamId);
   } catch (e) {
     return handlePageError(e);
@@ -269,18 +270,11 @@ export default async function InstructorTeamPage({ params, searchParams }: { par
             <section>
               <h2 className="text-heading">History</h2>
               {history.length === 0 ? (
-                <p className="mt-1 text-small text-hint">No reassignments yet.</p>
+                <p className="mt-1 text-small text-hint">No reassignments or deleted tasks yet.</p>
               ) : (
-                <ul className="mt-3 space-y-2">
-                  {history.map((r) => (
-                    <li key={r.reassignment_id} className="rounded-xl bg-wash p-3.5 text-small">
-                      <span className="font-semibold">{r.task_title}</span>: {r.from_name} → {r.to_name} · {formatDate(r.reassigned_date)}
-                      <span className="block text-hint">
-                        {r.by_role === "instructor" ? "By you" : `By ${r.by_name}`}: {r.reassignment_reason}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+                <div className="mt-3">
+                  <TaskHistoryList items={history} viewer="instructor" />
+                </div>
               )}
             </section>
           </div>

@@ -28,6 +28,12 @@ export async function run(sql: string, ...params: unknown[]): Promise<number> {
   return Number(res.meta.last_row_id ?? 0);
 }
 
+/** Runs one write and returns how many rows it changed (for guarded UPDATEs and DELETEs). */
+export async function runCount(sql: string, ...params: unknown[]): Promise<number> {
+  const res = await db().prepare(sql).bind(...params).run();
+  return Number(res.meta.changes ?? 0);
+}
+
 /** Runs several writes atomically (D1 batches are a single transaction). */
 export async function batch(statements: { sql: string; params: unknown[] }[]): Promise<void> {
   if (statements.length === 0) return;

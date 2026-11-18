@@ -4,12 +4,14 @@ import {
   groupRosterByTeam,
   inactiveMembers,
   allAgreed,
+  canAnswerDeleteRequest,
   charterStatus,
   isCharterComplete,
   nextSetupStep,
   nextVerificationStatus,
   parseRosterCsv,
   statusAfterDisputeResolution,
+  taskDeleteMode,
   validateHours,
   type Rating,
 } from "@/lib/rules";
@@ -192,5 +194,39 @@ describe("instructor next step", () => {
   it("then nudges about unused invites, then nothing", () => {
     expect(nextSetupStep({ ...base, pendingInvites: 1, pendingTeamId: 7 })).toEqual({ kind: "invites", title: "1 student hasn't joined yet. Send them their link.", teamId: 7 });
     expect(nextSetupStep(base)).toBeNull();
+  });
+});
+
+describe("deleting tasks", () => {
+  const MARCUS = 10, PRIYA = 11, DEVON = 12;
+  const task = (o: Partial<Parameters<typeof taskDeleteMode>[0]> = {}) => ({ user_id: MARCUS, delete_requested_by_id: null, has_work: false, ...o });
+
+  it("lets the owner delete straight away, including a task reassigned to them", () => {
+    expect(taskDeleteMode(task(), MARCUS)).toBe("delete");
+    expect(taskDeleteMode(task({ user_id: PRIYA }), PRIYA)).toBe("delete");
+  });
+
+  it("lets anyone delete an unassigned task, since there's no owner to ask", () => {
+    expect(taskDeleteMode(task({ user_id: null }), DEVON)).toBe("delete");
+  });
+
+  it("makes any other teammate ask the owner", () => {
+    expect(taskDeleteMode(task({ user_id: PRIYA }), MARCUS)).toBe("request");
+    expect(taskDeleteMode(task({ user_id: PRIYA }), DEVON)).toBe("request");
+  });
+
+  it("never allows deleting a task with logged work, not even by the owner", () => {
+    expect(taskDeleteMode(task({ has_work: true }), MARCUS)).toBeNull();
+    expect(taskDeleteMode(task({ has_work: true, user_id: null }), MARCUS)).toBeNull();
+    expect(taskDeleteMode(task({ has_work: true, user_id: PRIYA }), MARCUS)).toBeNull();
+  });
+
+  it("lets only the current owner answer a pending request", () => {
+    const pending = task({ user_id: PRIYA, delete_requested_by_id: MARCUS });
+    expect(canAnswerDeleteRequest(pending, PRIYA)).toBe(true);
+    expect(canAnswerDeleteRequest(pending, MARCUS)).toBe(false);
+    expect(canAnswerDeleteRequest(pending, DEVON)).toBe(false);
+    expect(canAnswerDeleteRequest({ ...pending, delete_requested_by_id: null }, PRIYA)).toBe(false);
+    expect(canAnswerDeleteRequest({ ...pending, has_work: true }, PRIYA)).toBe(false);
   });
 });
