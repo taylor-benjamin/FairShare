@@ -13,8 +13,8 @@ export function ResetPasswordForm({ action: serverAction, email }: { action: (pr
     <form action={action} className="space-y-4" noValidate>
       {/* Lets password managers save the new password against the right account. */}
       <input type="email" name="username" autoComplete="username" value={email} readOnly hidden />
-      <Field label="New password" htmlFor="password" hint="At least 8 characters.">
-        <PasswordInput id="password" autoComplete="new-password" />
+      <Field label="New password" htmlFor="password">
+        <PasswordInput id="password" autoComplete="new-password" placeholder="At least 8 characters" />
       </Field>
       <Field label="Type it again" htmlFor="confirm">
         <PasswordInput id="confirm" autoComplete="new-password" />

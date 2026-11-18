@@ -61,14 +61,14 @@ export function NewProjectForm({ templates, courses }: Props) {
         {(courseId === "new" || courses.length === 0) && (
           <div className="grid gap-3 sm:grid-cols-[1fr_2fr_1fr]">
             <input type="hidden" name="courseId" value="new" />
-            <Field label="Course code" htmlFor="courseCode" hint="e.g. MGT 3200">
-              <input id="courseCode" name="courseCode" maxLength={20} defaultValue={v.courseCode} className="field-input" />
+            <Field label="Course code" htmlFor="courseCode">
+              <input id="courseCode" name="courseCode" maxLength={20} placeholder="e.g. MGT 3200" defaultValue={v.courseCode} className="field-input" />
             </Field>
-            <Field label="Course name" htmlFor="courseName" hint="e.g. Principles of Management">
-              <input id="courseName" name="courseName" maxLength={100} defaultValue={v.courseName} className="field-input" />
+            <Field label="Course name" htmlFor="courseName">
+              <input id="courseName" name="courseName" maxLength={100} placeholder="e.g. Principles of Management" defaultValue={v.courseName} className="field-input" />
             </Field>
-            <Field label="Section" htmlFor="sectionNumber" hint="e.g. 2">
-              <input id="sectionNumber" name="sectionNumber" maxLength={10} defaultValue={v.sectionNumber} className="field-input" />
+            <Field label="Section" htmlFor="sectionNumber">
+              <input id="sectionNumber" name="sectionNumber" maxLength={10} placeholder="e.g. 2" defaultValue={v.sectionNumber} className="field-input" />
             </Field>
           </div>
         )}
@@ -76,8 +76,8 @@ export function NewProjectForm({ templates, courses }: Props) {
 
       <fieldset className="space-y-3">
         <legend className="font-semibold">About the project</legend>
-        <Field label="Project name" htmlFor="projectName" hint="Students see this in their channel header.">
-          <input id="projectName" name="projectName" maxLength={100} defaultValue={v.projectName ?? "Semester Group Project"} className="field-input" />
+        <Field label="Project name" htmlFor="projectName">
+          <input id="projectName" name="projectName" maxLength={100} placeholder="Students see this on their team page" defaultValue={v.projectName ?? "Semester Group Project"} className="field-input" />
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Start date" htmlFor="startDate">

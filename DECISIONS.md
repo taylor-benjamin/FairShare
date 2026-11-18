@@ -67,3 +67,10 @@ Choices made where the build spec or the Milestone 1/2 documents were silent, am
 ## Task reassignment (Nov 2026)
 
 39. **Any teammate can reassign a task, not just the instructor.** Students do it from the Tasks tab; the instructor still can from the team page. A reason is always required, and every move is recorded with who made it, so the instructor can see if someone moves work (and the future credit that follows it, see #8) without agreement. Only tasks that already have an owner can be reassigned, because `task_reassignments.from_user_id` is `NOT NULL`.
+
+## Charter agreement and UI cleanup (Nov 2026)
+
+40. **Everyone agrees to the charter's goals and expectations, then they lock (migration 0004).** Saving new text resets everyone's agreement; the person saving agrees to their own text. When every member has agreed, the text locks. Any member can reopen it, which records them as the last editor and asks everyone to agree again. A new member joining a locked charter doesn't unlock it; they just need to agree. The charter is complete when everyone has agreed and set a role. Existing complete charters were marked agreed and locked by the migration.
+41. **Agreeing checks the version.** The Agree button sends the charter's `updated_date`; if a teammate saved changes in the meantime, the agree is refused so nobody agrees to text they haven't seen.
+42. **"Last updated by ... on ..."** uses `team_charters.updated_by_id` and `updated_date`, shown in the reader's own time zone.
+43. **The charter lives on the team banner**, not in the tab row, with its status (e.g. "2 of 4 agreed"). Tasks are grouped into To do, In progress and Done buckets. Field hints became placeholders, and dropdowns have rounded lists where the browser allows it (Chrome and Edge 135+).

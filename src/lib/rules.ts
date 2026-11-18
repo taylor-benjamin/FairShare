@@ -26,8 +26,26 @@ export function statusAfterDisputeResolution(resolution: "upheld" | "rejected"):
 
 // ── Team charter ─────────────────────────────────────────────────────────────
 
-export function isCharterComplete(members: { role_confirmed: number; team_role: string | null }[]): boolean {
-  return members.length > 0 && members.every((m) => m.role_confirmed === 1 && !!m.team_role?.trim());
+export function isCharterComplete(members: { role_confirmed: number; team_role: string | null; charter_agreed: number }[]): boolean {
+  return members.length > 0 && members.every((m) => m.role_confirmed === 1 && !!m.team_role?.trim() && m.charter_agreed === 1);
+}
+
+/** Everyone on the team has agreed to the current goals and expectations. */
+export function allAgreed(members: { charter_agreed: number }[]): boolean {
+  return members.length > 0 && members.every((m) => m.charter_agreed === 1);
+}
+
+/** Short status for the charter, shown on the team banner and the charter page. */
+export function charterStatus(
+  hasCharter: boolean,
+  members: { role_confirmed: number; team_role: string | null; charter_agreed: number }[],
+): { label: string; done: boolean } {
+  if (!hasCharter) return { label: "Not started", done: false };
+  if (isCharterComplete(members)) return { label: "Complete", done: true };
+  const agreed = members.filter((m) => m.charter_agreed === 1).length;
+  if (agreed < members.length) return { label: `${agreed} of ${members.length} agreed`, done: false };
+  const roles = members.filter((m) => m.role_confirmed === 1 && m.team_role?.trim()).length;
+  return { label: `${roles} of ${members.length} roles set`, done: false };
 }
 
 // ── Integrity flags (P16) ────────────────────────────────────────────────────

@@ -61,8 +61,8 @@ export function SignupForm() {
       <Field label="Email" htmlFor="email">
         <input id="email" name="email" type="email" autoComplete="email" defaultValue={v.email} className="field-input" maxLength={100} />
       </Field>
-      <Field label="Password" htmlFor="password" hint="At least 8 characters.">
-        <PasswordInput id="password" autoComplete="new-password" />
+      <Field label="Password" htmlFor="password">
+        <PasswordInput id="password" autoComplete="new-password" placeholder="At least 8 characters" />
       </Field>
       {state.error && (
         <p className="text-small text-disputed" role="alert">

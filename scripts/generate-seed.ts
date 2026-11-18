@@ -142,8 +142,9 @@ async function main() {
         date_received: at(54),
         accepted_date: at(53),
       });
-      // Pelicans' charter is still in progress: Taylor hasn't confirmed a role yet.
+      // Pelicans' charter is still in progress: Taylor hasn't set a role, and Sam and Taylor haven't agreed yet.
       const confirmed = !(t.id === 2 && key === "taylor");
+      const agreed = !(t.id === 2 && (key === "sam" || key === "taylor"));
       insert("team_memberships", {
         membership_id: memId++,
         team_id: t.id,
@@ -151,6 +152,7 @@ async function main() {
         access_level: "write",
         team_role: roles[key],
         role_confirmed: confirmed ? 1 : 0,
+        charter_agreed: agreed ? 1 : 0,
         joined_date: at(53),
       });
     }
@@ -174,6 +176,9 @@ async function main() {
     expectations: "Reply in Discord within 24 hours. Log work the day you finish it. Flag blockers by Wednesday so we can adjust before Friday check-ins.",
     created_date: at(52),
     completed_date: at(50),
+    updated_by_id: P.marcus.id,
+    updated_date: at(50),
+    locked_date: at(50),
   });
   insert("team_charters", {
     charter_id: 2,
@@ -182,6 +187,9 @@ async function main() {
     expectations: "Meet Tuesdays at 6pm. Split work evenly and say so early if you're overloaded.",
     created_date: at(51),
     completed_date: null,
+    updated_by_id: P.jordan.id,
+    updated_date: at(3),
+    locked_date: null,
   });
   insert("team_charters", {
     charter_id: 3,
@@ -190,6 +198,9 @@ async function main() {
     expectations: "Weekly stand-up on Mondays; every document reviewed by a second person.",
     created_date: at(52),
     completed_date: at(51),
+    updated_by_id: P.chris.id,
+    updated_date: at(51),
+    locked_date: at(51),
   });
 
   // ── Tasks and the reassignment (P13) ───────────────────────────────────────

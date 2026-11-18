@@ -22,8 +22,8 @@ export function ForgotPasswordForm() {
   }
   return (
     <form action={action} className="space-y-4" noValidate>
-      <Field label="Email" htmlFor="email" hint="The address you use to log in to FairShare.">
-        <input id="email" name="email" type="email" autoComplete="email" required defaultValue={state.values?.email} className="field-input" />
+      <Field label="Email" htmlFor="email">
+        <input id="email" name="email" type="email" autoComplete="email" required placeholder="The email you log in with" defaultValue={state.values?.email} className="field-input" />
       </Field>
       {state.error && (
         <p className="text-small text-disputed" role="alert">

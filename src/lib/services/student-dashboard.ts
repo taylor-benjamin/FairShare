@@ -45,6 +45,9 @@ export async function getStudentDashboard(user: SessionUser | null) {
     if (t.channel_status === "published" && !(t.role_confirmed && t.team_role)) {
       todos.push({ key: `role-${t.team_id}`, label: `Set your role in the charter${inTeam(t.team_name)}`, href: `/teams/${t.team_id}/charter`, tone: "warning" });
     }
+    if (t.channel_status === "published" && t.has_charter && !t.charter_agreed) {
+      todos.push({ key: `agree-${t.team_id}`, label: `Agree to the team charter${inTeam(t.team_name)}`, href: `/teams/${t.team_id}/charter`, tone: "warning" });
+    }
   }
 
   const teamCards = myTeams.map((t) => {

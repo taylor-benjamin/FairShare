@@ -152,11 +152,11 @@ export default async function InstructorTeamPage({ params, searchParams }: { par
             <ActionForm action={addStudentAction.bind(null, teamId)} resetOnSuccess className="mt-4">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
                 <div className="flex-1">
-                  <Field label="Add a student" htmlFor="add-email" hint="They get an invite to join this team.">
+                  <Field label="Add a student" htmlFor="add-email">
                     <input id="add-email" name="email" type="email" maxLength={100} placeholder="student@school.edu" className="field-input" />
                   </Field>
                 </div>
-                <SubmitButton pendingText="Adding…" className="sm:mb-6">
+                <SubmitButton pendingText="Adding…">
                   Add student
                 </SubmitButton>
               </div>
@@ -233,8 +233,8 @@ export default async function InstructorTeamPage({ params, searchParams }: { par
                       ))}
                     </select>
                   </Field>
-                  <Field label="Reason" htmlFor="reason" hint="The team sees this. e.g. “Agreed in office hours on Oct 14.”">
-                    <input id="reason" name="reason" maxLength={255} className="field-input" />
+                  <Field label="Reason" htmlFor="reason">
+                    <input id="reason" name="reason" maxLength={255} placeholder="The team sees this, e.g. agreed in office hours" className="field-input" />
                   </Field>
                   <SubmitButton pendingText="Saving…">Record reassignment</SubmitButton>
                 </ActionForm>

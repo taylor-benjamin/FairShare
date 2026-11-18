@@ -143,9 +143,10 @@ export const teams = {
     ),
   byProject: (projectId: number) => all<TeamRow>("SELECT * FROM teams WHERE project_id = ? ORDER BY team_name", projectId),
   forStudent: (userId: number) =>
-    all<TeamContextRow & { access_level: AccessLevel; team_role: string | null; role_confirmed: number }>(
+    all<TeamContextRow & { access_level: AccessLevel; team_role: string | null; role_confirmed: number; charter_agreed: number; has_charter: number }>(
       `SELECT t.*, c.instructor_id, c.course_id, c.course_code, c.course_name, c.section_number, p.project_name, p.anonymous_evals,
-              m.access_level, m.team_role, m.role_confirmed
+              m.access_level, m.team_role, m.role_confirmed, m.charter_agreed,
+              EXISTS (SELECT 1 FROM team_charters ch WHERE ch.team_id = t.team_id) AS has_charter
        FROM team_memberships m JOIN teams t ON t.team_id = m.team_id JOIN projects p ON p.project_id = t.project_id
        JOIN courses c ON c.course_id = p.course_id
        WHERE m.user_id = ? AND t.channel_status <> 'draft' ORDER BY t.creation_date DESC`,
@@ -191,10 +192,10 @@ export const invitations = {
         userId,
         ts,
       ),
-      // A new member hasn't set a role yet, so the charter is no longer complete.
+      // A new member hasn't set a role or agreed yet, so the charter is no longer complete.
       stmt(
         `UPDATE team_charters SET completed_date = NULL WHERE team_id = ?
-         AND EXISTS (SELECT 1 FROM team_memberships WHERE team_id = ? AND user_id = ? AND team_role IS NULL)`,
+         AND EXISTS (SELECT 1 FROM team_memberships WHERE team_id = ? AND user_id = ? AND (team_role IS NULL OR charter_agreed = 0))`,
         teamId,
         teamId,
         userId,
@@ -287,17 +288,49 @@ export async function deleteDraftTeams(projectId: number): Promise<void> {
 
 // ── Charters and tasks ───────────────────────────────────────────────────────
 
+export type CharterWithEditor = CharterRow & { updated_by_first: string | null; updated_by_last: string | null };
+
 export const charters = {
-  byTeam: (teamId: number) => first<CharterRow>("SELECT * FROM team_charters WHERE team_id = ?", teamId),
-  upsert: (teamId: number, goals: string, expectations: string) =>
-    run(
-      `INSERT INTO team_charters (team_id, team_goals, expectations, created_date) VALUES (?, ?, ?, ?)
-       ON CONFLICT(team_id) DO UPDATE SET team_goals = excluded.team_goals, expectations = excluded.expectations`,
+  byTeam: (teamId: number) =>
+    first<CharterWithEditor>(
+      `SELECT c.*, u.first_name AS updated_by_first, u.last_name AS updated_by_last
+       FROM team_charters c LEFT JOIN users u ON u.user_id = c.updated_by_id WHERE c.team_id = ?`,
       teamId,
-      goals,
-      expectations,
-      now(),
     ),
+  /**
+   * Saves new goals and expectations. Any change resets everyone's agreement; the person saving agrees to their own text.
+   * One transaction, so a teammate never sees new text with old agreements.
+   */
+  saveText: (teamId: number, userId: number, goals: string, expectations: string) => {
+    const ts = now();
+    return batch([
+      stmt(
+        `INSERT INTO team_charters (team_id, team_goals, expectations, created_date, updated_by_id, updated_date) VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT(team_id) DO UPDATE SET team_goals = excluded.team_goals, expectations = excluded.expectations,
+           updated_by_id = excluded.updated_by_id, updated_date = excluded.updated_date, locked_date = NULL, completed_date = NULL`,
+        teamId,
+        goals,
+        expectations,
+        ts,
+        userId,
+        ts,
+      ),
+      stmt("UPDATE team_memberships SET charter_agreed = 0 WHERE team_id = ?", teamId),
+      stmt("UPDATE team_memberships SET charter_agreed = 1 WHERE team_id = ? AND user_id = ?", teamId, userId),
+    ]);
+  },
+  agree: (teamId: number, userId: number) =>
+    run("UPDATE team_memberships SET charter_agreed = 1 WHERE team_id = ? AND user_id = ?", teamId, userId),
+  /** Unlocks the goals and expectations for editing. Everyone has to agree again. */
+  reopen: (teamId: number, userId: number) => {
+    const ts = now();
+    return batch([
+      stmt("UPDATE team_charters SET locked_date = NULL, completed_date = NULL, updated_by_id = ?, updated_date = ? WHERE team_id = ?", userId, ts, teamId),
+      stmt("UPDATE team_memberships SET charter_agreed = 0 WHERE team_id = ?", teamId),
+    ]);
+  },
+  /** Locks once everyone has agreed. A lock stays in place when a new member joins; they just need to agree too. */
+  lock: (teamId: number) => run("UPDATE team_charters SET locked_date = COALESCE(locked_date, ?) WHERE team_id = ?", now(), teamId),
   setCompleted: (teamId: number, completed: boolean) =>
     completed
       ? run("UPDATE team_charters SET completed_date = COALESCE(completed_date, ?) WHERE team_id = ?", now(), teamId)

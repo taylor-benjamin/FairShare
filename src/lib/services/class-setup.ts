@@ -3,7 +3,6 @@ import "server-only";
 import { randomToken } from "../auth/crypto";
 import { authorize } from "../permissions";
 import {
-  charters,
   courses,
   createDraftTeams,
   deleteDraftTeams,
@@ -19,9 +18,10 @@ import {
   type ProjectWithCourse,
 } from "../data/repo";
 import { sendEmail } from "../email";
-import { groupRosterByTeam, isCharterComplete, isIsoDate, nextSetupStep, parseRosterCsv } from "../rules";
+import { groupRosterByTeam, isIsoDate, nextSetupStep, parseRosterCsv } from "../rules";
 import type { SessionUser } from "../types";
 import { authorizeTeam, NotFoundError, UserError } from "./common";
+import { refreshCharter } from "./team-health";
 
 export async function listTemplates(user: SessionUser | null) {
   authorize(user, "course.create");
@@ -285,9 +285,8 @@ export async function removeMember(user: SessionUser | null, teamId: number, use
   await authorizeTeam(user, "team.manage", teamId);
   if (!(await memberships.forUser(teamId, userId))) throw new NotFoundError("That student isn't on this team.");
   await memberships.remove(teamId, userId);
-  // Removing the last student without a role can complete the charter.
-  const remaining = await memberships.byTeam(teamId);
-  if (await charters.byTeam(teamId)) await charters.setCompleted(teamId, isCharterComplete(remaining));
+  // Removing the last student who hadn't agreed or set a role can lock or complete the charter.
+  await refreshCharter(teamId);
 }
 
 /** Cancels a pending invite so its link stops working. */

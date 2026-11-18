@@ -3,7 +3,7 @@ import "server-only";
 import { EARLY_WARNING } from "@/config/integrity-rules";
 import { authorize, can } from "../permissions";
 import { charters, contributions, disputes, flags, memberships, projects, tasks, teams } from "../data/repo";
-import { inactiveMembers, isCharterComplete } from "../rules";
+import { allAgreed, charterStatus, inactiveMembers, isCharterComplete } from "../rules";
 import type { SessionUser } from "../types";
 import { authorizeTeam, fullName, NotFoundError, UserError } from "./common";
 
@@ -12,29 +12,69 @@ import { authorizeTeam, fullName, NotFoundError, UserError } from "./common";
 export async function getCharter(user: SessionUser | null, teamId: number) {
   const { team, resource } = await authorizeTeam(user, "team.read", teamId);
   const [charter, members] = await Promise.all([charters.byTeam(teamId), memberships.byTeam(teamId)]);
-  return { team, charter, members, complete: !!charter?.completed_date, canWrite: can(user, "team.write", resource) };
+  return {
+    team,
+    charter,
+    members,
+    complete: !!charter?.completed_date,
+    locked: !!charter?.locked_date,
+    canWrite: can(user, "team.write", resource),
+  };
 }
 
-async function refreshCharterCompletion(teamId: number) {
-  const members = await memberships.byTeam(teamId);
-  const charter = await charters.byTeam(teamId);
-  if (charter) await charters.setCompleted(teamId, isCharterComplete(members));
+/** Re-checks the lock (everyone agreed) and completion (everyone agreed and set a role) after any charter or membership change. */
+export async function refreshCharter(teamId: number) {
+  const [charter, members] = await Promise.all([charters.byTeam(teamId), memberships.byTeam(teamId)]);
+  if (!charter) return;
+  if (!charter.locked_date && allAgreed(members)) await charters.lock(teamId);
+  await charters.setCompleted(teamId, isCharterComplete(members));
 }
 
-/** Saves the shared goals/expectations and the signed-in student's own role (setting it confirms it). */
-export async function saveCharter(user: SessionUser | null, teamId: number, input: { goals: string; expectations: string; myRole: string }) {
+/** Saves the shared goals and expectations. Everyone else has to agree again; the person saving agrees to their own text. */
+export async function saveCharterText(user: SessionUser | null, teamId: number, input: { goals: string; expectations: string }) {
   await authorizeTeam(user, "team.write", teamId);
-  if (!input.goals) throw new UserError("Write at least one team goal.");
-  if (!input.expectations) throw new UserError("Write down how you'll communicate and hit deadlines.");
-  if (input.goals.length > 2000 || input.expectations.length > 2000) throw new UserError("Keep goals and expectations under 2,000 characters each.");
+  const goals = input.goals.trim();
+  const expectations = input.expectations.trim();
+  if (!goals) throw new UserError("Write at least one team goal.");
+  if (!expectations) throw new UserError("Write down how you'll communicate and hit deadlines.");
+  if (goals.length > 2000 || expectations.length > 2000) throw new UserError("Keep goals and expectations under 2,000 characters each.");
+  const current = await charters.byTeam(teamId);
+  if (current?.locked_date) throw new UserError("The charter is locked. Reopen it to make changes.");
+  if (current && current.team_goals === goals && current.expectations === expectations) {
+    // Nothing changed, so don't reset everyone's agreement; just record this member's.
+    await charters.agree(teamId, user!.userId);
+  } else {
+    await charters.saveText(teamId, user!.userId, goals, expectations);
+  }
+  await refreshCharter(teamId);
+}
 
-  const myRole = input.myRole.trim().slice(0, 50);
-  if (!myRole) throw new UserError("Enter your role on the team.");
+/** A member agrees to the goals and expectations as they read them. `version` is the charter's updated_date on their screen. */
+export async function agreeToCharter(user: SessionUser | null, teamId: number, version: string) {
+  await authorizeTeam(user, "team.write", teamId);
+  const current = await charters.byTeam(teamId);
+  if (!current) throw new UserError("Your team hasn't written the charter yet.");
+  if ((current.updated_date ?? "") !== version) throw new UserError("The charter just changed. Read the new version, then agree.");
+  await charters.agree(teamId, user!.userId);
+  await refreshCharter(teamId);
+}
 
-  await charters.upsert(teamId, input.goals, input.expectations);
-  // Students only ever set their own role; teammates' roles are theirs to choose.
-  await memberships.setOwnRole(teamId, user!.userId, myRole);
-  await refreshCharterCompletion(teamId);
+/** Unlocks the goals and expectations so the team can change them. Everyone has to agree again. */
+export async function reopenCharter(user: SessionUser | null, teamId: number) {
+  await authorizeTeam(user, "team.write", teamId);
+  const current = await charters.byTeam(teamId);
+  if (!current?.locked_date) return;
+  await charters.reopen(teamId, user!.userId);
+  await refreshCharter(teamId);
+}
+
+/** A student sets their own role (setting it confirms it). Teammates' roles are theirs to choose. */
+export async function saveMyRole(user: SessionUser | null, teamId: number, roleRaw: string) {
+  await authorizeTeam(user, "team.write", teamId);
+  const role = roleRaw.trim().slice(0, 50);
+  if (!role) throw new UserError("Enter your role on the team.");
+  await memberships.setOwnRole(teamId, user!.userId, role);
+  await refreshCharter(teamId);
 }
 
 // ── Task reassignment (P13) ──────────────────────────────────────────────────
@@ -126,11 +166,17 @@ export async function teamSignals(user: SessionUser | null, projectId: number, a
 export async function teamHeader(user: SessionUser | null, teamId: number) {
   const { team, resource } = await authorizeTeam(user, "team.read", teamId);
   const member = resource.membership !== null && user!.role === "student";
+  const showCharter = member || can(user, "team.manage", resource);
+  let charter = null;
+  if (showCharter) {
+    const [c, members] = await Promise.all([charters.byTeam(teamId), memberships.byTeam(teamId)]);
+    charter = charterStatus(!!c, members);
+  }
   return {
     team,
+    charter,
     tabs: {
       tasks: member || can(user, "team.manage", resource),
-      charter: member || can(user, "team.manage", resource),
       ratings: can(user, "evaluation.submit", resource),
       feedback: can(user, "evaluation.readOwn", resource),
       instructor: can(user, "team.manage", resource),

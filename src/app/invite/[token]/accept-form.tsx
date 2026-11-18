@@ -12,7 +12,7 @@ export function AcceptInviteForm({ action: serverAction, email, hasAccount }: { 
   const v = state.values ?? {};
   return (
     <form action={action} className="space-y-4" noValidate>
-      <Field label="Email" htmlFor="email" hint="From your instructor's class list.">
+      <Field label="Email" htmlFor="email">
         <input id="email" value={email} readOnly className="field-input bg-wash" />
       </Field>
       {!hasAccount && (
@@ -28,9 +28,8 @@ export function AcceptInviteForm({ action: serverAction, email, hasAccount }: { 
       <Field
         label={hasAccount ? "Your FairShare password" : "Choose a password"}
         htmlFor="password"
-        hint={hasAccount ? "Use your existing FairShare password." : "At least 8 characters."}
       >
-        <PasswordInput id="password" autoComplete={hasAccount ? "current-password" : "new-password"} />
+        <PasswordInput id="password" autoComplete={hasAccount ? "current-password" : "new-password"} placeholder={hasAccount ? undefined : "At least 8 characters"} />
       </Field>
       {state.error && (
         <p className="text-small text-disputed" role="alert">

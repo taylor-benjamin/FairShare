@@ -3,6 +3,8 @@ import {
   detectIntegrityFlags,
   groupRosterByTeam,
   inactiveMembers,
+  allAgreed,
+  charterStatus,
   isCharterComplete,
   nextSetupStep,
   nextVerificationStatus,
@@ -38,11 +40,26 @@ describe("claim-and-verify status", () => {
 });
 
 describe("team charter", () => {
-  it("is complete only when every member has a role and confirmed it", () => {
+  const m = (role_confirmed: number, team_role: string | null, charter_agreed = 1) => ({ role_confirmed, team_role, charter_agreed });
+  it("is complete only when every member has set a role and agreed", () => {
     expect(isCharterComplete([])).toBe(false);
-    expect(isCharterComplete([{ role_confirmed: 1, team_role: "Lead" }, { role_confirmed: 0, team_role: "Docs" }])).toBe(false);
-    expect(isCharterComplete([{ role_confirmed: 1, team_role: "Lead" }, { role_confirmed: 1, team_role: null }])).toBe(false);
-    expect(isCharterComplete([{ role_confirmed: 1, team_role: "Lead" }, { role_confirmed: 1, team_role: "Docs" }])).toBe(true);
+    expect(isCharterComplete([m(1, "Lead"), m(0, "Docs")])).toBe(false);
+    expect(isCharterComplete([m(1, "Lead"), m(1, null)])).toBe(false);
+    expect(isCharterComplete([m(1, "Lead"), m(1, "Docs", 0)])).toBe(false);
+    expect(isCharterComplete([m(1, "Lead"), m(1, "Docs")])).toBe(true);
+  });
+
+  it("locks only when everyone has agreed", () => {
+    expect(allAgreed([])).toBe(false);
+    expect(allAgreed([m(1, "Lead"), m(1, "Docs", 0)])).toBe(false);
+    expect(allAgreed([m(0, null), m(1, "Docs")])).toBe(true);
+  });
+
+  it("sums up its status for the team banner", () => {
+    expect(charterStatus(false, [m(1, "Lead")])).toEqual({ label: "Not started", done: false });
+    expect(charterStatus(true, [m(1, "Lead"), m(1, "Docs", 0), m(0, null, 0)]).label).toBe("1 of 3 agreed");
+    expect(charterStatus(true, [m(1, "Lead"), m(0, null)]).label).toBe("1 of 2 roles set");
+    expect(charterStatus(true, [m(1, "Lead"), m(1, "Docs")])).toEqual({ label: "Complete", done: true });
   });
 });
 

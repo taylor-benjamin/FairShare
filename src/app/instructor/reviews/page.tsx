@@ -48,8 +48,8 @@ export default async function ReviewsPage() {
                     }}
                     footer={
                       <ActionForm action={resolveDisputeAction.bind(null, d.dispute_id)} className="mt-3 space-y-2 border-t border-line pt-3">
-                        <Field label="Your note to the team" htmlFor={`note-${d.dispute_id}`} hint="Required. The team sees this.">
-                          <input id={`note-${d.dispute_id}`} name="note" maxLength={255} className="field-input" />
+                        <Field label="Your note to the team" htmlFor={`note-${d.dispute_id}`}>
+                          <input id={`note-${d.dispute_id}`} name="note" maxLength={255} placeholder="Required. The team sees this" className="field-input" />
                         </Field>
                         <div className="flex flex-wrap gap-2">
                           <SubmitButton variant="dispute" small name="resolution" value="upheld" pendingText="Saving…">

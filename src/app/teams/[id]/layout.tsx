@@ -4,6 +4,7 @@ import { handlePageError } from "@/components/access-denied";
 import { HeaderBar, Notice } from "@/components/ui";
 import { requireUser } from "@/lib/auth/session";
 import { teamHeader } from "@/lib/services/team-health";
+import { CharterLink } from "./charter-link";
 import { TeamTabs } from "./team-tabs";
 
 export default async function TeamLayout({ children, params }: { children: ReactNode; params: Promise<{ id: string }> }) {
@@ -20,7 +21,7 @@ export default async function TeamLayout({ children, params }: { children: React
       </>
     );
   }
-  const { team, tabs, readOnlyReason } = header;
+  const { team, tabs, charter, readOnlyReason } = header;
   const back = tabs.instructor
     ? { href: `/instructor/teams/${teamId}`, label: "Instructor view" }
     : { href: "/teams", label: "Dashboard" };
@@ -28,7 +29,6 @@ export default async function TeamLayout({ children, params }: { children: React
   const items = [
     { href: `/teams/${teamId}`, label: "Log & Verify", show: true },
     { href: `/teams/${teamId}/tasks`, label: "Tasks", show: tabs.tasks },
-    { href: `/teams/${teamId}/charter`, label: "Charter", show: tabs.charter },
     { href: `/teams/${teamId}/ratings`, label: "Ratings", show: tabs.ratings },
     { href: `/teams/${teamId}/feedback`, label: "Feedback", show: tabs.feedback },
   ].filter((i) => i.show);
@@ -36,7 +36,9 @@ export default async function TeamLayout({ children, params }: { children: React
   return (
     <>
       <AppNav user={user} />
-      <HeaderBar title={team.team_name} subtitle={`${team.project_name} · ${team.course_code} Section ${team.section_number}`} back={back} />
+      <HeaderBar title={team.team_name} subtitle={`${team.project_name} · ${team.course_code} Section ${team.section_number}`} back={back}
+        right={charter && <CharterLink href={`/teams/${teamId}/charter`} label={charter.label} done={charter.done} />}
+      />
       {items.length > 1 && <TeamTabs items={items} />}
       {readOnlyReason && (
         <div className="mx-auto max-w-6xl px-4 pt-4 sm:px-6">

@@ -8,16 +8,18 @@ export function PasswordInput({
   name = id,
   autoComplete,
   required,
+  placeholder,
 }: {
   id: string;
   name?: string;
   autoComplete: "current-password" | "new-password";
   required?: boolean;
+  placeholder?: string;
 }) {
   const [visible, setVisible] = useState(false);
   return (
     <div className="relative">
-      <input id={id} name={name} type={visible ? "text" : "password"} autoComplete={autoComplete} required={required} className="field-input pr-12" />
+      <input id={id} name={name} type={visible ? "text" : "password"} autoComplete={autoComplete} required={required} placeholder={placeholder} className="field-input pr-12" />
       <button
         type="button"
         onClick={() => setVisible((v) => !v)}

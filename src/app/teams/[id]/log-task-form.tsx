@@ -40,17 +40,17 @@ export function LogTaskForm({ action: serverAction, tasks }: { action: (prev: Ac
   return (
     <form ref={ref} action={action} className="space-y-4" noValidate>
       <p className="section-label">Log a completed task</p>
-      <Field label="What did you do?" htmlFor="description" hint="One line is enough." error={fe.description}>
+      <Field label="What did you do?" htmlFor="description" error={fe.description}>
         <input
           id="description"
           name="description"
           className="field-input"
-          placeholder="Drafted the ERD for milestone 2"
+          placeholder="One line, e.g. drafted the ERD for milestone 2"
           maxLength={255}
           defaultValue={v.description}
           key={`d-${state.stamp ?? 0}`}
           aria-invalid={!!fe.description}
-          aria-describedby={fe.description ? "description-error" : "description-hint"}
+          aria-describedby={fe.description ? "description-error" : undefined}
           required
         />
       </Field>
@@ -85,7 +85,7 @@ export function LogTaskForm({ action: serverAction, tasks }: { action: (prev: Ac
         </Field>
       </div>
       {tasks.length > 0 && (
-        <Field label="Planned task (optional)" htmlFor="taskId" error={fe.taskId} hint="Link it if this work was one of your team's planned tasks.">
+        <Field label="Planned task (optional)" htmlFor="taskId" error={fe.taskId}>
           <select id="taskId" name="taskId" className="field-input" value={taskId} onChange={(e) => setTaskId(e.target.value)} aria-invalid={!!fe.taskId}>
             <option value="">Not a planned task</option>
             {tasks.map((t) => (

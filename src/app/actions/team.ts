@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth/session";
 import { addTask, logContribution, setTaskStatus, verifyContribution } from "@/lib/services/contribution-service";
 import { submitRatings } from "@/lib/services/peer-evaluation";
-import { reassignTask, saveCharter } from "@/lib/services/team-health";
+import { agreeToCharter, reassignTask, reopenCharter, saveCharterText, saveMyRole } from "@/lib/services/team-health";
 import { UserError } from "@/lib/services/common";
 import type { ActionState } from "@/lib/action-state";
 import type { TaskStatus } from "@/lib/types";
@@ -71,14 +71,40 @@ export async function reassignTaskAction(taskId: number, teamId: number, _: Acti
   });
 }
 
+// Charter changes also update the status chip on the team banner, so revalidate the whole team layout.
+const charterChanged = (teamId: number) => revalidatePath(`/teams/${teamId}`, "layout");
+
 export async function saveCharterAction(teamId: number, _: ActionState, fd: FormData): Promise<ActionState> {
   return attempt(async () => {
-    await saveCharter(await getCurrentUser(), teamId, { goals: str(fd, "goals", 2000), expectations: str(fd, "expectations", 2000), myRole: str(fd, "myRole", 50) });
-    revalidatePath(`/teams/${teamId}/charter`);
-    return "Charter saved.";
+    await saveCharterText(await getCurrentUser(), teamId, { goals: str(fd, "goals", 2000), expectations: str(fd, "expectations", 2000) });
+    charterChanged(teamId);
+    return "Saved.";
   });
 }
 
+export async function agreeCharterAction(teamId: number, _: ActionState, fd: FormData): Promise<ActionState> {
+  return attempt(async () => {
+    await agreeToCharter(await getCurrentUser(), teamId, str(fd, "version", 40));
+    charterChanged(teamId);
+    return "Agreed.";
+  });
+}
+
+export async function reopenCharterAction(teamId: number): Promise<ActionState> {
+  return attempt(async () => {
+    await reopenCharter(await getCurrentUser(), teamId);
+    charterChanged(teamId);
+    return "Reopened.";
+  });
+}
+
+export async function saveRoleAction(teamId: number, _: ActionState, fd: FormData): Promise<ActionState> {
+  return attempt(async () => {
+    await saveMyRole(await getCurrentUser(), teamId, str(fd, "myRole", 50));
+    charterChanged(teamId);
+    return "Role saved.";
+  });
+}
 
 /** P15 — rate every teammate for a completed milestone. */
 export async function submitRatingsAction(teamId: number, milestoneId: number, _: ActionState, fd: FormData): Promise<ActionState> {

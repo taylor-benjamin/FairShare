@@ -10,11 +10,14 @@ export function ConfirmAction({
   label,
   confirm,
   pendingText = "…",
+  tone = "danger",
 }: {
   action: (prev: ActionState, fd: FormData) => Promise<ActionState>;
   label: string;
   confirm: string;
   pendingText?: string;
+  /** "danger" for removing things, "plain" for reversible steps like reopening the charter. */
+  tone?: "danger" | "plain";
 }) {
   const [state, action] = useActionState(serverAction, {});
   return (
@@ -25,7 +28,7 @@ export function ConfirmAction({
       }}
       className="inline-flex items-center gap-2"
     >
-      <SubmitButton variant="ghost" small pendingText={pendingText} className="!border-0 !px-2.5 !py-1 !text-disputed hover:!bg-disputed-soft">
+      <SubmitButton variant="ghost" small pendingText={pendingText} className={tone === "danger" ? "!border-0 !px-2.5 !py-1 !text-disputed hover:!bg-disputed-soft" : ""}>
         {label}
       </SubmitButton>
       {state.error && <span className="text-small text-disputed">{state.error}</span>}

@@ -85,6 +85,8 @@ export interface MembershipRow {
   access_level: AccessLevel;
   team_role: string | null;
   role_confirmed: number;
+  /** 1 once this member agrees to the current charter goals and expectations (migration 0004). */
+  charter_agreed: number;
   joined_date: string;
 }
 
@@ -105,6 +107,10 @@ export interface CharterRow {
   expectations: string;
   created_date: string;
   completed_date: string | null;
+  updated_by_id: number | null;
+  updated_date: string | null;
+  /** Set when every member has agreed; goals and expectations are read-only until someone reopens them. */
+  locked_date: string | null;
 }
 
 export interface TaskRow {
