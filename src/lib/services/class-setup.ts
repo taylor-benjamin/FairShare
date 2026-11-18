@@ -19,7 +19,7 @@ import {
   type ProjectWithCourse,
 } from "../data/repo";
 import { sendEmail } from "../email";
-import { groupRosterByTeam, isCharterComplete, isIsoDate, parseRosterCsv } from "../rules";
+import { groupRosterByTeam, isCharterComplete, isIsoDate, nextSetupStep, parseRosterCsv } from "../rules";
 import type { SessionUser } from "../types";
 import { authorizeTeam, NotFoundError, UserError } from "./common";
 
@@ -304,4 +304,18 @@ export async function getTeamRoster(user: SessionUser | null, teamId: number) {
   const { team } = await authorizeTeam(user, "team.manage", teamId);
   const [members, invites] = await Promise.all([memberships.byTeam(teamId), invitations.byTeam(teamId)]);
   return { team, members, pending: invites.filter((i) => i.invite_status === "pending") };
+}
+
+/** The one thing the instructor should do next on this project (null when nothing is waiting). */
+export async function projectNextStep(user: SessionUser | null, projectId: number) {
+  const { teams: teamRows, milestones: ms } = await getSetupOverview(user, projectId);
+  const d = new Date();
+  const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return nextSetupStep({
+    teamCount: teamRows.length,
+    draftCount: teamRows.filter((t) => t.channel_status === "draft").length,
+    pendingInvites: teamRows.filter((t) => t.channel_status !== "draft").flatMap((t) => t.invitations).filter((i) => i.invite_status === "pending").length,
+    milestones: ms,
+    today,
+  });
 }

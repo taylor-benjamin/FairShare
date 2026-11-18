@@ -251,3 +251,33 @@ export function validateHours(raw: string): { value: number | null; error?: stri
 export function isIsoDate(s: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(new Date(s + "T00:00:00Z").getTime());
 }
+
+// ── Instructor "next step" (one clear action per project) ────────────────────
+
+export type NextStep =
+  | { kind: "upload"; title: string }
+  | { kind: "publish"; title: string }
+  | { kind: "invites"; title: string }
+  | { kind: "add-milestone"; title: string }
+  | { kind: "complete-milestone"; title: string; milestoneId: number }
+  | null;
+
+/**
+ * The single most useful thing an instructor should do next on a project, in setup order.
+ * Returns null when nothing is waiting.
+ */
+export function nextSetupStep(input: {
+  teamCount: number;
+  draftCount: number;
+  pendingInvites: number;
+  milestones: { milestone_id: number; milestone_name: string; milestone_status: string; due_date: string }[];
+  today: string; // YYYY-MM-DD
+}): NextStep {
+  if (input.teamCount === 0) return { kind: "upload", title: "Upload your class list to create the team channels." };
+  if (input.draftCount > 0) return { kind: "publish", title: `Publish ${input.draftCount} team ${input.draftCount === 1 ? "channel" : "channels"} so students get their invites.` };
+  if (input.milestones.length === 0) return { kind: "add-milestone", title: "Add your first milestone. Completing it opens peer ratings." };
+  const due = input.milestones.filter((m) => m.milestone_status === "open" && m.due_date <= input.today).sort((a, b) => a.due_date.localeCompare(b.due_date))[0];
+  if (due) return { kind: "complete-milestone", title: `${due.milestone_name} is due. Mark it complete to open peer ratings.`, milestoneId: due.milestone_id };
+  if (input.pendingInvites > 0) return { kind: "invites", title: `${input.pendingInvites} ${input.pendingInvites === 1 ? "student hasn't" : "students haven't"} joined yet. Send them their link.` };
+  return null;
+}

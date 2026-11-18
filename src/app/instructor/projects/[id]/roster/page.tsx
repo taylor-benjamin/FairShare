@@ -29,7 +29,7 @@ export default async function RosterPage({ params }: { params: Promise<{ id: str
         narrow
         title="Upload your class list"
         subtitle={`${data.project.project_name} · ${data.project.course_code} Section ${data.project.section_number}`}
-        back={{ href: projectHref, label: "Project" }}
+        crumbs={[{ href: "/instructor", label: "Dashboard" }, { href: projectHref, label: data.project.project_name }]}
       />
       <Page narrow>
         <Stepper current={2} />

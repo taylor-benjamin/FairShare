@@ -115,12 +115,15 @@ export function HeaderBar({
   title,
   subtitle,
   back,
+  crumbs,
   right,
   narrow,
 }: {
   title: string;
   subtitle?: string;
   back?: { href: string; label: string };
+  /** Breadcrumb trail above the title, e.g. Dashboard › Project. Shown instead of `back`. */
+  crumbs?: { href: string; label: string }[];
   right?: ReactNode;
   /** Match a <Page narrow> body so the title lines up with the content below it. */
   narrow?: boolean;
@@ -133,7 +136,24 @@ export function HeaderBar({
         <span aria-hidden className="pointer-events-none absolute -bottom-24 left-1/3 -z-10 size-64 rounded-full bg-sky-300/25 blur-3xl" />
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            {back && (
+            {crumbs && crumbs.length > 0 ? (
+              <nav aria-label="Breadcrumb" className="mb-1.5">
+                <ol className="flex min-w-0 flex-wrap items-center gap-x-1.5 text-small text-white/80">
+                  {crumbs.map((c, i) => (
+                    <li key={c.href} className="flex min-w-0 items-center gap-1.5">
+                      {i > 0 && (
+                        <span aria-hidden className="text-white/50">
+                          ›
+                        </span>
+                      )}
+                      <Link href={c.href} className="truncate rounded-full transition-colors hover:text-white hover:underline">
+                        {c.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ol>
+              </nav>
+            ) : back && (
               <Link href={back.href} className="mb-1.5 inline-block rounded-full text-small text-white/80 transition-colors hover:text-white">
                 <span className="inline-flex items-center gap-1">
                   <ArrowIcon direction="left" />
@@ -206,4 +226,28 @@ export function formatDate(iso: string | null | undefined, withYear = false): st
 export function formatHours(h: number | null | undefined): string {
   if (h === null || h === undefined) return "";
   return `${Number.isInteger(h) ? h : h.toFixed(1)} h`;
+}
+
+/**
+ * Tabs that live in the URL (?tab=…), so each section can be linked to and the back button works.
+ * Renders as a pill bar that scrolls sideways on narrow phones.
+ */
+export function PageTabs({ base, active, items }: { base: string; active: string; items: { key: string; label: string; count?: number }[] }) {
+  return (
+    <nav aria-label="Sections" className="mb-6 overflow-x-auto">
+      <div className="pill-track">
+        {items.map((t, i) => {
+          const on = t.key === active;
+          const href = i === 0 ? base : `${base}?tab=${t.key}`;
+          return (
+            <Link key={t.key} href={href} aria-current={on ? "page" : undefined} className="pill inline-flex items-center gap-1.5">
+              {on && <span aria-hidden className="size-1.5 rounded-full bg-secondary" />}
+              {t.label}
+              {t.count !== undefined && t.count > 0 && <span className="rounded-full bg-wash px-1.5 text-[11px] text-hint">{t.count}</span>}
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
+  );
 }

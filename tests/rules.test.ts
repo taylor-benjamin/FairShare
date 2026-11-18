@@ -4,6 +4,7 @@ import {
   groupRosterByTeam,
   inactiveMembers,
   isCharterComplete,
+  nextSetupStep,
   nextVerificationStatus,
   parseRosterCsv,
   statusAfterDisputeResolution,
@@ -153,5 +154,26 @@ describe("hours validation", () => {
     expect(validateHours("").value).toBeNull();
     expect(validateHours("30").error).toBe("Enter a number from 0.5 to 24.");
     expect(validateHours("abc").error).toBeDefined();
+  });
+});
+
+describe("instructor next step", () => {
+  const ms = (status: string, due: string, id = 1) => ({ milestone_id: id, milestone_name: `M${id}`, milestone_status: status, due_date: due });
+  const base = { teamCount: 3, draftCount: 0, pendingInvites: 0, milestones: [ms("completed", "2026-10-01")], today: "2026-11-17" };
+
+  it("walks through setup in order", () => {
+    expect(nextSetupStep({ ...base, teamCount: 0 })?.kind).toBe("upload");
+    expect(nextSetupStep({ ...base, draftCount: 2 })?.kind).toBe("publish");
+    expect(nextSetupStep({ ...base, milestones: [] })?.kind).toBe("add-milestone");
+  });
+
+  it("asks to complete the earliest milestone that is due", () => {
+    const step = nextSetupStep({ ...base, milestones: [ms("open", "2026-11-20", 3), ms("open", "2026-11-10", 2)] });
+    expect(step).toEqual({ kind: "complete-milestone", title: "M2 is due. Mark it complete to open peer ratings.", milestoneId: 2 });
+  });
+
+  it("then nudges about unused invites, then nothing", () => {
+    expect(nextSetupStep({ ...base, pendingInvites: 1 })?.title).toBe("1 student hasn't joined yet. Send them their link.");
+    expect(nextSetupStep(base)).toBeNull();
   });
 });

@@ -9,7 +9,6 @@ const linksFor = (role: SessionUser["role"]) =>
     ? [
         { href: "/instructor", label: "Dashboard" },
         { href: "/instructor/reviews", label: "Reviews" },
-        { href: "/instructor/projects/new", label: "New project" },
       ]
     : [{ href: "/teams", label: "Dashboard" }];
 
@@ -26,6 +25,18 @@ export function AppNav({ user }: { user: SessionUser }) {
         </Link>
         <NavLinks links={linksFor(user.role)} />
         <div className="ml-auto flex shrink-0 items-center gap-3 text-small">
+          {user.role === "instructor" && (
+            <Link
+              href="/instructor/projects/new"
+              aria-label="New project"
+              className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 font-semibold text-white shadow-[0_4px_14px_rgb(37_99_235/0.25)] transition hover:bg-primary-dark sm:px-4"
+            >
+              <svg aria-hidden viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" className="size-4">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              <span className="hidden sm:inline">New project</span>
+            </Link>
+          )}
           <span className="hidden items-center gap-2 sm:inline-flex">
             <span aria-hidden className="grid size-8 place-items-center rounded-full bg-primary text-[12px] font-semibold text-white ring-2 ring-secondary/60 ring-offset-2">
               {user.firstName[0]}

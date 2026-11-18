@@ -17,7 +17,7 @@ export default async function ReviewsPage() {
 
   return (
     <>
-      <HeaderBar title="Needs your review" subtitle="Disputed work and unusual rating patterns, oldest first" back={{ href: "/instructor", label: "Dashboard" }} />
+      <HeaderBar title="Needs your review" subtitle="Disputed work and unusual rating patterns, oldest first" crumbs={[{ href: "/instructor", label: "Dashboard" }]} />
       <Page>
         <div className="grid gap-10 lg:grid-cols-2">
           <section>
@@ -104,7 +104,7 @@ export default async function ReviewsPage() {
                     <SubmitButton variant="secondary" small name="status" value="dismissed" pendingText="Saving…">
                       Dismiss
                     </SubmitButton>
-                    <SubmitButton variant="dispute" small name="status" value="confirmed" pendingText="Saving…">
+                    <SubmitButton variant="primary" small name="status" value="confirmed" pendingText="Saving…">
                       Confirm
                     </SubmitButton>
                   </ActionForm>

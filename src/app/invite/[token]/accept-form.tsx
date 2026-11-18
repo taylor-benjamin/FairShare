@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import type { ActionState } from "@/lib/action-state";
 import { SubmitButton } from "@/components/forms";
 import { Field } from "@/components/ui";
+import { PasswordInput } from "@/components/password-input";
 
 /** `action` is bound on the server (acceptInviteAction.bind(null, token)). */
 export function AcceptInviteForm({ action: serverAction, email, hasAccount }: { action: (prev: ActionState, fd: FormData) => Promise<ActionState>; email: string; hasAccount: boolean }) {
@@ -29,7 +30,7 @@ export function AcceptInviteForm({ action: serverAction, email, hasAccount }: { 
         htmlFor="password"
         hint={hasAccount ? "Use your existing FairShare password." : "At least 8 characters."}
       >
-        <input id="password" name="password" type="password" autoComplete={hasAccount ? "current-password" : "new-password"} className="field-input" />
+        <PasswordInput id="password" autoComplete={hasAccount ? "current-password" : "new-password"} />
       </Field>
       {state.error && (
         <p className="text-small text-disputed" role="alert">

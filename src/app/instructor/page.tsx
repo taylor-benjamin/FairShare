@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { ArrowIcon, Chip, EmptyState, HeaderBar, LinkButton, Notice, Page, Progress, StatTile } from "@/components/ui";
+import { NextStepCard } from "@/components/next-step";
+import { ArrowIcon, Chip, EmptyState, HeaderBar, LinkButton, Notice, Page, StatTile } from "@/components/ui";
 import { requireUser } from "@/lib/auth/session";
-import { listMyProjects } from "@/lib/services/class-setup";
+import { listMyProjects, projectNextStep } from "@/lib/services/class-setup";
 import { disputeQueue } from "@/lib/services/contribution-service";
 import { flagQueue } from "@/lib/services/peer-evaluation";
 import { teamSignals } from "@/lib/services/team-health";
@@ -13,7 +14,9 @@ export default async function InstructorDashboard({ searchParams }: { searchPara
   const { deleted } = await searchParams;
   const user = await requireUser(["instructor"]);
   const [projects, disputes, flags] = await Promise.all([listMyProjects(user), disputeQueue(user), flagQueue(user)]);
-  const withSignals = await Promise.all(projects.map(async (p) => ({ project: p, teams: await teamSignals(user, p.project_id) })));
+  const withSignals = await Promise.all(
+    projects.map(async (p) => ({ project: p, teams: await teamSignals(user, p.project_id), next: await projectNextStep(user, p.project_id) })),
+  );
   const attention = withSignals.flatMap((p) => p.teams.filter((t) => t.needsAttention));
   const reviewCount = disputes.open.length + flags.open.length;
   const allTeams = withSignals.flatMap((p) => p.teams);
@@ -22,15 +25,7 @@ export default async function InstructorDashboard({ searchParams }: { searchPara
 
   return (
     <>
-      <HeaderBar
-        title={`Good to see you, ${user.firstName}`}
-        subtitle="Your class projects at a glance"
-        right={
-          <LinkButton href="/instructor/projects/new" variant="secondary" small className="shrink-0 border-white bg-white">
-            + New project
-          </LinkButton>
-        }
-      />
+      <HeaderBar title={`Good to see you, ${user.firstName}`} subtitle="Your class projects at a glance" />
       <Page>
         {deleted === "project" && (
           <div className="mb-6">
@@ -53,15 +48,6 @@ export default async function InstructorDashboard({ searchParams }: { searchPara
               <StatTile label="Need attention" value={attention.length} caption="quiet teams or open issues" tone="secondary" icon={<AlertIcon />} />
               <StatTile label="To review" value={reviewCount} caption={`${disputes.open.length} ${disputes.open.length === 1 ? "dispute" : "disputes"} · ${flags.open.length} ${flags.open.length === 1 ? "flag" : "flags"}`} tone="disputed" icon={<FlagIcon />} href="/instructor/reviews" />
             </div>
-            {liveTeams.length > 0 && (
-              <div className="card mb-6 p-4 sm:p-5">
-                <div className="mb-2 flex items-baseline justify-between gap-2">
-                  <p className="font-semibold">Class health</p>
-                  <p className="text-small text-hint">{onTrackPct}% of teams on track</p>
-                </div>
-                <Progress value={onTrackPct} tone="secondary" label="Share of teams on track" />
-              </div>
-            )}
             {reviewCount > 0 ? (
               <Link href="/instructor/reviews" className="mb-6 block rounded-(--radius-card) border border-primary/20 bg-primary-tint p-4 sm:p-5 hover:border-primary">
                 <p className="font-semibold text-primary">Needs your review</p>
@@ -79,13 +65,8 @@ export default async function InstructorDashboard({ searchParams }: { searchPara
                 <Notice tone="success">Nothing needs your review right now.</Notice>
               </div>
             )}
-            {attention.length > 0 && (
-              <p className="mb-4 text-small text-hint">
-                {attention.length} {attention.length === 1 ? "team needs" : "teams need"} attention. Teams on track are listed too, so you can check in any time.
-              </p>
-            )}
 
-            {withSignals.map(({ project, teams }) => (
+            {withSignals.map(({ project, teams, next }) => (
               <section key={project.project_id} className="mb-10">
                 <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
                   <div>
@@ -95,17 +76,15 @@ export default async function InstructorDashboard({ searchParams }: { searchPara
                     </p>
                   </div>
                   <Link href={`/instructor/projects/${project.project_id}`} className="link inline-flex items-center gap-1 text-small">
-                    Manage project <ArrowIcon />
+                    Open project <ArrowIcon />
                   </Link>
                 </div>
-                {teams.length === 0 ? (
-                  <EmptyState title="No teams yet">
-                    <Link href={`/instructor/projects/${project.project_id}/roster`} className="link">
-                      Upload your class list
-                    </Link>{" "}
-                    to create team channels.
-                  </EmptyState>
-                ) : (
+                {next && (
+                  <div className="mb-3">
+                    <NextStepCard step={next} projectId={project.project_id} />
+                  </div>
+                )}
+                {teams.length === 0 ? null : (
                   <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     {[...teams]
                       .sort((a, b) => Number(b.needsAttention) - Number(a.needsAttention))

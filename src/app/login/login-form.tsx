@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import { loginAction, signupAction } from "@/app/actions/auth";
 import { SubmitButton } from "@/components/forms";
 import { Field } from "@/components/ui";
+import { PasswordInput } from "@/components/password-input";
 
 export function LoginForm() {
   const [state, action] = useActionState(loginAction, {});
@@ -22,7 +23,7 @@ export function LoginForm() {
             Forgot password?
           </Link>
         </div>
-        <input id="password" name="password" type="password" autoComplete="current-password" required className="field-input" />
+        <PasswordInput id="password" autoComplete="current-password" required />
       </div>
       {state.error && (
         <p className="text-small text-disputed" role="alert">
@@ -61,7 +62,7 @@ export function SignupForm() {
         <input id="email" name="email" type="email" autoComplete="email" defaultValue={v.email} className="field-input" maxLength={100} />
       </Field>
       <Field label="Password" htmlFor="password" hint="At least 8 characters.">
-        <input id="password" name="password" type="password" autoComplete="new-password" className="field-input" />
+        <PasswordInput id="password" autoComplete="new-password" />
       </Field>
       {state.error && (
         <p className="text-small text-disputed" role="alert">
