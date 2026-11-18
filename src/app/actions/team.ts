@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth/session";
 import { addTask, logContribution, setTaskStatus, verifyContribution } from "@/lib/services/contribution-service";
 import { submitRatings } from "@/lib/services/peer-evaluation";
-import { saveCharter } from "@/lib/services/team-health";
+import { reassignTask, saveCharter } from "@/lib/services/team-health";
 import { UserError } from "@/lib/services/common";
 import type { ActionState } from "@/lib/action-state";
 import type { TaskStatus } from "@/lib/types";
@@ -56,6 +56,18 @@ export async function taskStatusAction(taskId: number, teamId: number, _: Action
   return attempt(async () => {
     await setTaskStatus(await getCurrentUser(), taskId, str(fd, "status") as TaskStatus);
     revalidatePath(`/teams/${teamId}/tasks`);
+  });
+}
+
+/** P13 — any writing teammate can hand a task to someone else; the move and its reason go into the team's history. */
+export async function reassignTaskAction(taskId: number, teamId: number, _: ActionState, fd: FormData): Promise<ActionState> {
+  return attempt(async () => {
+    const toUserId = int(fd, "toUserId");
+    if (toUserId === null) throw new UserError("Pick the teammate taking over the task.");
+    await reassignTask(await getCurrentUser(), taskId, toUserId, str(fd, "reason", 255));
+    revalidatePath(`/teams/${teamId}/tasks`);
+    revalidatePath(`/teams/${teamId}`);
+    return "Task reassigned.";
   });
 }
 

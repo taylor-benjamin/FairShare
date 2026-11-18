@@ -340,11 +340,15 @@ export const tasks = {
       reassigned_date: string;
       from_name: string;
       to_name: string;
+      by_name: string;
+      by_role: string;
     }>(
       `SELECT r.reassignment_id, t.task_title, r.reassignment_reason, r.reassigned_date,
-              uf.first_name || ' ' || uf.last_name AS from_name, ut.first_name || ' ' || ut.last_name AS to_name
+              uf.first_name || ' ' || uf.last_name AS from_name, ut.first_name || ' ' || ut.last_name AS to_name,
+              ub.first_name || ' ' || ub.last_name AS by_name, ub.system_role AS by_role
        FROM task_reassignments r JOIN tasks t ON t.task_id = r.task_id
        JOIN users uf ON uf.user_id = r.from_user_id JOIN users ut ON ut.user_id = r.to_user_id
+       JOIN users ub ON ub.user_id = r.reassigned_by_id
        WHERE t.team_id = ? ORDER BY r.reassigned_date DESC`,
       teamId,
     ),

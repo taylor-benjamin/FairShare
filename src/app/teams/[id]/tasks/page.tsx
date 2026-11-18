@@ -1,4 +1,4 @@
-import { addTaskAction, taskStatusAction } from "@/app/actions/team";
+import { addTaskAction, reassignTaskAction, taskStatusAction } from "@/app/actions/team";
 import { handlePageError } from "@/components/access-denied";
 import { ActionForm, SubmitButton } from "@/components/forms";
 import { Chip, EmptyState, Field, formatDate, Page } from "@/components/ui";
@@ -58,6 +58,30 @@ export default async function TasksPage({ params }: { params: Promise<{ id: stri
                       </SubmitButton>
                     </ActionForm>
                   )}
+                  {canWrite && t.user_id !== null && members.length > 1 && (
+                    <details className="mt-3">
+                      <summary className="cursor-pointer text-small text-hint">Reassign</summary>
+                      <ActionForm action={reassignTaskAction.bind(null, t.task_id, teamId)} resetOnSuccess className="mt-3 space-y-3">
+                        <Field label="Give it to" htmlFor={`to-${t.task_id}`}>
+                          <select id={`to-${t.task_id}`} name="toUserId" className="field-input">
+                            {members
+                              .filter((m) => m.user_id !== t.user_id)
+                              .map((m) => (
+                                <option key={m.user_id} value={m.user_id}>
+                                  {m.first_name} {m.last_name}
+                                </option>
+                              ))}
+                          </select>
+                        </Field>
+                        <Field label="Reason" htmlFor={`reason-${t.task_id}`} hint="Your team and instructor see this.">
+                          <input id={`reason-${t.task_id}`} name="reason" maxLength={255} className="field-input" />
+                        </Field>
+                        <SubmitButton variant="secondary" small pendingText="Saving…">
+                          Reassign task
+                        </SubmitButton>
+                      </ActionForm>
+                    </details>
+                  )}
                 </li>
               ))}
             </ul>
@@ -65,12 +89,14 @@ export default async function TasksPage({ params }: { params: Promise<{ id: stri
 
           {history.length > 0 && (
             <div className="mt-8">
-              <p className="section-label mb-3">Reassigned by your instructor</p>
+              <p className="section-label mb-3">Reassignment history</p>
               <ul className="space-y-2">
                 {history.map((r) => (
                   <li key={r.reassignment_id} className="rounded-xl bg-wash p-3.5 text-small">
                     <span className="font-semibold">{r.task_title}</span>: {r.from_name} → {r.to_name} · {formatDate(r.reassigned_date)}
-                    <span className="block text-hint">{r.reassignment_reason}</span>
+                    <span className="block text-hint">
+                      {r.by_role === "instructor" ? "By your instructor" : `By ${r.by_name}`}: {r.reassignment_reason}
+                    </span>
                   </li>
                 ))}
               </ul>

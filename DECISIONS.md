@@ -63,3 +63,7 @@ Choices made where the build spec or the Milestone 1/2 documents were silent, am
 36. **Students set only their own charter role**, and setting it confirms it. Goals and expectations stay shared. A new member makes the charter incomplete until they set their role; removing a member re-checks it.
 37. **Instructors can add a student to a published team, remove a member, or cancel a pending invite** from the team page. A removed student's logged work stays in the log, and their unfinished tasks become unassigned.
 38. **"Completed on" defaults to the student's own local date**, set in the browser. The server accepts dates up to the latest local date anywhere (UTC+14), not 36 hours ahead.
+
+## Task reassignment (Nov 2026)
+
+39. **Any teammate can reassign a task, not just the instructor.** Students do it from the Tasks tab; the instructor still can from the team page. A reason is always required, and every move is recorded with who made it, so the instructor can see if someone moves work (and the future credit that follows it, see #8) without agreement. Only tasks that already have an owner can be reassigned, because `task_reassignments.from_user_id` is `NOT NULL`.

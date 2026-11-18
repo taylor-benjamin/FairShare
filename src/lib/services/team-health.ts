@@ -47,7 +47,7 @@ export async function reassignTask(user: SessionUser | null, taskId: number, toU
   if (task.user_id === toUserId) throw new UserError("Pick a different teammate to take over the task.");
   if (!(await memberships.forUser(task.team_id, toUserId))) throw new UserError("Pick someone on this team.");
   const reason = reasonRaw.trim().slice(0, 255);
-  if (!reason) throw new UserError("Add a short reason, for example “agreed in office hours on Oct 14”.");
+  if (!reason) throw new UserError("Add a short reason, for example “Devon is swamped this week, so Priya is taking it”.");
   await tasks.reassign(taskId, task.user_id, toUserId, user!.userId, reason);
 }
 

@@ -10,13 +10,13 @@ export type Action =
   | "team.manage" // publish, finish, change settings of a team channel
   | "dispute.resolve"
   | "flag.review"
-  | "task.reassign"
   | "evaluation.readAll" // see every rating with evaluator names
   | "project.delete" // permanently delete a project and all its teams
   | "team.delete" // permanently delete one team channel and everything in it
   // Team channel
   | "team.read" // see the activity feed, members, charter
   | "team.write" // log work, confirm/dispute, edit charter, add tasks
+  | "task.reassign" // move a task to another teammate (instructor or any writing member), with a recorded reason
   | "evaluation.submit"
   | "evaluation.readOwn"; // a student's own received ratings (names hidden if anonymous)
 
@@ -80,7 +80,6 @@ export function can(user: SessionUser | null, action: Action, resource: Resource
     case "team.manage":
     case "dispute.resolve":
     case "flag.review":
-    case "task.reassign":
     case "evaluation.readAll":
     case "project.delete":
     case "team.delete":
@@ -93,6 +92,10 @@ export function can(user: SessionUser | null, action: Action, resource: Resource
 
     case "team.write":
       return canWriteTeam(user, resource);
+
+    case "task.reassign":
+      // The course instructor, or any teammate who can write in the channel. Every move is logged with a reason.
+      return ownsResource(user, resource) || canWriteTeam(user, resource);
 
     case "evaluation.submit":
       // Ratings are part of working in the channel; a finished channel may still collect final ratings.

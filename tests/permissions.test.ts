@@ -55,9 +55,17 @@ describe("instructor", () => {
 describe("student", () => {
   it("cannot create courses or manage anything", () => {
     expect(can(marcus, "course.create")).toBe(false);
-    for (const action of ["course.manage", "team.manage", "dispute.resolve", "flag.review", "task.reassign", "evaluation.readAll"] as const) {
+    for (const action of ["course.manage", "team.manage", "dispute.resolve", "flag.review", "evaluation.readAll"] as const) {
       expect(can(marcus, action, asMember())).toBe(false);
     }
+  });
+
+  it("can reassign tasks only in a published team they can write in", () => {
+    expect(can(marcus, "task.reassign", asMember())).toBe(true);
+    expect(can(marcus, "task.reassign", asMember("read"))).toBe(false);
+    expect(can(marcus, "task.reassign", asMember("write", { channelStatus: "finished" }))).toBe(false);
+    expect(can(marcus, "task.reassign", asMember("write", { channelStatus: "draft" }))).toBe(false);
+    expect(can(marcus, "task.reassign", team())).toBe(false);
   });
 
   it("reads and writes a published team they belong to with write access", () => {

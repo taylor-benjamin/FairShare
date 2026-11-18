@@ -249,7 +249,9 @@ export default async function InstructorTeamPage({ params, searchParams }: { par
                   {history.map((r) => (
                     <li key={r.reassignment_id} className="rounded-xl bg-wash p-3.5 text-small">
                       <span className="font-semibold">{r.task_title}</span>: {r.from_name} → {r.to_name} · {formatDate(r.reassigned_date)}
-                      <span className="block text-hint">{r.reassignment_reason}</span>
+                      <span className="block text-hint">
+                        {r.by_role === "instructor" ? "By you" : `By ${r.by_name}`}: {r.reassignment_reason}
+                      </span>
                     </li>
                   ))}
                 </ul>
