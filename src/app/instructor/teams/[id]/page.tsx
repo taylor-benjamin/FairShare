@@ -178,28 +178,54 @@ export default async function InstructorTeamPage({ params, searchParams }: { par
                 </EmptyState>
               </div>
             ) : (
-              results.matrix.map(({ milestone, ratings }) => (
-                <div key={milestone.milestone_id} className="mt-4">
-                  <p className="font-semibold">{milestone.milestone_name}</p>
-                  {ratings.length === 0 ? (
-                    <p className="text-small text-hint">No ratings submitted yet.</p>
-                  ) : (
-                    <ul className="card mt-2 divide-y divide-line overflow-hidden text-small">
-                      {ratings.map((r, i) => (
-                        <li key={i} className="px-3 py-2">
-                          <div className="flex justify-between">
-                            <span>
-                              {r.from} → {r.to}
-                            </span>
-                            <span className="font-semibold">{r.score}/5</span>
-                          </div>
-                          {r.comment && <p className="text-hint">“{r.comment}”</p>}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              ))
+              <ul className="mt-3 space-y-2">
+                {members.map((m) => {
+                  const given = results.matrix.map(({ milestone, ratings }) => ({ milestone, ratings: ratings.filter((r) => r.fromId === m.user_id) }));
+                  const done = given.filter((g) => g.ratings.length > 0).length;
+                  return (
+                    <li key={m.user_id}>
+                      {/* One collapsible row per student: open it to see the ratings they gave. */}
+                      <details className="group card overflow-hidden">
+                        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-wash [&::-webkit-details-marker]:hidden">
+                          <span className="min-w-0 truncate font-semibold">
+                            {m.first_name} {m.last_name}
+                          </span>
+                          <span className="flex shrink-0 items-center gap-2">
+                            <Chip tone={done === given.length ? "confirmed" : "pending"}>
+                              {done} of {given.length} submitted
+                            </Chip>
+                            <svg aria-hidden viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="size-4 text-hint transition-transform duration-200 group-open:rotate-180">
+                              <path d="m6 9 6 6 6-6" />
+                            </svg>
+                          </span>
+                        </summary>
+                        <div className="space-y-4 border-t border-line px-4 py-3">
+                          {given.map(({ milestone, ratings }) => (
+                            <div key={milestone.milestone_id}>
+                              <p className="section-label">{milestone.milestone_name}</p>
+                              {ratings.length === 0 ? (
+                                <p className="mt-1 text-small text-hint">Not submitted yet.</p>
+                              ) : (
+                                <ul className="mt-1 divide-y divide-line text-small">
+                                  {ratings.map((r) => (
+                                    <li key={r.toId} className="py-2">
+                                      <div className="flex justify-between gap-2">
+                                        <span>{r.to}</span>
+                                        <span className="font-semibold">{r.score}/5</span>
+                                      </div>
+                                      {r.comment && <p className="text-hint">“{r.comment}”</p>}
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </details>
+                    </li>
+                  );
+                })}
+              </ul>
             )}
           </section>
         )}
