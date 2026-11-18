@@ -125,10 +125,10 @@ body {
 
   /* Pill segmented control: <div class="pill-track"><a class="pill" aria-current="page"> */
   .pill-track {
-    @apply inline-flex gap-1 rounded-full bg-wash p-1;
+    @apply inline-flex max-w-full flex-wrap gap-1 rounded-2xl bg-wash p-1;
   }
   .pill {
-    @apply shrink-0 rounded-full px-4 py-1.5 text-small whitespace-nowrap text-hint transition duration-200 ease-(--ease-fluid) hover:text-ink;
+    @apply shrink-0 rounded-full px-3 py-1.5 sm:px-4 text-small whitespace-nowrap text-hint transition duration-200 ease-(--ease-fluid) hover:text-ink;
   }
   .pill[aria-current="page"],
   .pill[aria-selected="true"] {

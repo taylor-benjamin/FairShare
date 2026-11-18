@@ -86,7 +86,7 @@ export function StatTile({ label, value, caption, tone = "primary", icon, href }
       <div className="min-w-0">
         <p className="text-small text-hint">{label}</p>
         <p className="text-display tabular-nums">{value}</p>
-        {caption && <p className="mt-0.5 text-small text-hint">{caption}</p>}
+        {caption && <p className="mt-0.5 hidden text-small text-hint sm:block">{caption}</p>}
       </div>
     </div>
   );
@@ -234,7 +234,7 @@ export function formatHours(h: number | null | undefined): string {
  */
 export function PageTabs({ base, active, items }: { base: string; active: string; items: { key: string; label: string; count?: number }[] }) {
   return (
-    <nav aria-label="Sections" className="mb-6 overflow-x-auto">
+    <nav aria-label="Sections" className="mb-6">
       <div className="pill-track">
         {items.map((t, i) => {
           const on = t.key === active;

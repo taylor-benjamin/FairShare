@@ -9,14 +9,12 @@ export const metadata = { title: "New project" };
 export default async function NewProjectPage() {
   const user = await requireUser(["instructor"]);
   const [templates, courses] = await Promise.all([listTemplates(user), listMyCourses(user)]);
-  const today = new Date();
-  const end = new Date(today.getTime() + 98 * 24 * 3600 * 1000);
   return (
     <>
       <HeaderBar narrow title="Set up a class project" subtitle="About ten minutes. You can change anything later." crumbs={[{ href: "/instructor", label: "Dashboard" }]} />
       <Page narrow>
         <Stepper current={1} />
-        <NewProjectForm templates={templates} courses={courses} defaults={{ startDate: today.toISOString().slice(0, 10), endDate: end.toISOString().slice(0, 10) }} />
+        <NewProjectForm templates={templates} courses={courses} />
       </Page>
     </>
   );

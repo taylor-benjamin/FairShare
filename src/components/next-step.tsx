@@ -26,7 +26,7 @@ export function NextStepCard({ step, projectId }: { step: NonNullable<NextStep>;
         </SubmitButton>
       </ActionForm>
     ) : (
-      <LinkButton href={project} small>
+      <LinkButton href={step.teamId ? `/instructor/teams/${step.teamId}?tab=members` : project} small>
         Send links
       </LinkButton>
     );

@@ -45,7 +45,7 @@ export default async function InstructorDashboard({ searchParams }: { searchPara
             <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
               <StatTile label="Teams" value={allTeams.length} caption={`across ${projects.length} ${projects.length === 1 ? "project" : "projects"}`} tone="primary" icon={<UsersIcon />} />
               <StatTile label="On track" value={`${onTrackPct}%`} caption={`${liveTeams.length - attention.length} of ${liveTeams.length} live teams`} tone="confirmed" icon={<CheckIcon />} />
-              <StatTile label="Need attention" value={attention.length} caption="quiet teams or open issues" tone="secondary" icon={<AlertIcon />} />
+              <StatTile label="Need attention" value={attention.length} caption="teams with warnings" tone="secondary" icon={<AlertIcon />} />
               <StatTile label="To review" value={reviewCount} caption={`${disputes.open.length} ${disputes.open.length === 1 ? "dispute" : "disputes"} · ${flags.open.length} ${flags.open.length === 1 ? "flag" : "flags"}`} tone="disputed" icon={<FlagIcon />} href="/instructor/reviews" />
             </div>
             {reviewCount > 0 ? (
@@ -106,9 +106,7 @@ export default async function InstructorDashboard({ searchParams }: { searchPara
                                 <Chip tone="confirmed">On track</Chip>
                               )}
                             </div>
-                            <p className={`mt-1 text-small ${t.needsAttention ? "text-primary" : "text-hint"}`}>
-                              {t.channelStatus === "draft" ? "Not published yet" : t.headline}
-                            </p>
+                            {t.channelStatus === "draft" && <p className="mt-1 text-small text-hint">Not published yet</p>}
                             {t.reasons.length > 0 && (
                               <ul className="mt-2 list-disc space-y-0.5 pl-5 text-small">
                                 {t.reasons.map((r) => (

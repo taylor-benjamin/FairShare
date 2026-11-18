@@ -16,15 +16,15 @@ const linksFor = (role: SessionUser["role"]) =>
 export function AppNav({ user }: { user: SessionUser }) {
   return (
     <nav className="sticky top-0 z-20 border-b border-line/70 bg-surface/85 backdrop-blur-md">
-      <div className="flex w-full items-center gap-x-4 gap-y-1 overflow-x-auto px-4 py-2.5 sm:px-6 lg:px-8">
+      <div className="flex w-full items-center gap-x-2 gap-y-1 px-4 py-2.5 sm:gap-x-4 sm:px-6 lg:px-8">
         <Link href="/" className="mr-1 flex shrink-0 items-center gap-2 font-semibold text-ink">
           <LogoMark size={30} className="rounded-lg ring-1 ring-line" />
-          <span>
+          <span className="hidden sm:inline">
             Fair<span className="text-secondary">Share</span>
           </span>
         </Link>
         <NavLinks links={linksFor(user.role)} />
-        <div className="ml-auto flex shrink-0 items-center gap-3 text-small">
+        <div className="ml-auto flex shrink-0 items-center gap-1.5 text-small sm:gap-3">
           {user.role === "instructor" && (
             <Link
               href="/instructor/projects/new"
@@ -50,7 +50,7 @@ export function AppNav({ user }: { user: SessionUser }) {
             </span>
           </span>
           <form action={logoutAction}>
-            <button className="rounded-full px-3 py-1.5 text-primary transition hover:bg-primary-tint">Log out</button>
+            <button className="rounded-full px-2 py-1.5 whitespace-nowrap text-primary transition hover:bg-primary-tint sm:px-3">Log out</button>
           </form>
         </div>
       </div>

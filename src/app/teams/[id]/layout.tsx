@@ -30,7 +30,7 @@ export default async function TeamLayout({ children, params }: { children: React
     { href: `/teams/${teamId}/tasks`, label: "Tasks", show: tabs.tasks },
     { href: `/teams/${teamId}/charter`, label: "Charter", show: tabs.charter },
     { href: `/teams/${teamId}/ratings`, label: "Ratings", show: tabs.ratings },
-    { href: `/teams/${teamId}/feedback`, label: "My feedback", show: tabs.feedback },
+    { href: `/teams/${teamId}/feedback`, label: "Feedback", show: tabs.feedback },
   ].filter((i) => i.show);
 
   return (

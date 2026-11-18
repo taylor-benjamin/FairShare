@@ -7,7 +7,7 @@ export function TeamTabs({ items }: { items: { href: string; label: string }[] }
   const path = usePathname();
   return (
     <div className="mx-auto max-w-6xl px-4 pt-4 sm:px-6">
-      <nav className="pill-track max-w-full overflow-x-auto" aria-label="Team channel sections">
+      <nav className="pill-track" aria-label="Team channel sections">
         {items.map((i) => {
           const active = path === i.href;
           return (

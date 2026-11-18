@@ -32,7 +32,7 @@ export function ContributionCard({ c, footer }: { c: CardData; footer?: ReactNod
   else
     chip = (
       <Chip tone="pending">
-        {c.isMine ? "Waiting for teammates" : c.myDecision ? "You confirmed" : "Pending"}
+        {c.isMine ? "Waiting" : c.myDecision ? "You confirmed" : "Pending"}
         {c.confirmsNeeded ? ` · ${c.confirm_count ?? 0}/${c.confirmsNeeded}` : ""}
       </Chip>
     );

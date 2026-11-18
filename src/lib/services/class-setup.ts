@@ -315,6 +315,7 @@ export async function projectNextStep(user: SessionUser | null, projectId: numbe
     teamCount: teamRows.length,
     draftCount: teamRows.filter((t) => t.channel_status === "draft").length,
     pendingInvites: teamRows.filter((t) => t.channel_status !== "draft").flatMap((t) => t.invitations).filter((i) => i.invite_status === "pending").length,
+    pendingTeamId: teamRows.find((t) => t.channel_status !== "draft" && t.invitations.some((i) => i.invite_status === "pending"))?.team_id ?? null,
     milestones: ms,
     today,
   });

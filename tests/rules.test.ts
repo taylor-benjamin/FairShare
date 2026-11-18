@@ -173,7 +173,7 @@ describe("instructor next step", () => {
   });
 
   it("then nudges about unused invites, then nothing", () => {
-    expect(nextSetupStep({ ...base, pendingInvites: 1 })?.title).toBe("1 student hasn't joined yet. Send them their link.");
+    expect(nextSetupStep({ ...base, pendingInvites: 1, pendingTeamId: 7 })).toEqual({ kind: "invites", title: "1 student hasn't joined yet. Send them their link.", teamId: 7 });
     expect(nextSetupStep(base)).toBeNull();
   });
 });

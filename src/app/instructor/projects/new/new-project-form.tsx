@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { createProjectAction } from "@/app/actions/instructor";
 import { SubmitButton } from "@/components/forms";
 import { Field, LinkButton } from "@/components/ui";
@@ -8,13 +8,26 @@ import { Field, LinkButton } from "@/components/ui";
 interface Props {
   templates: { template_id: number; template_name: string; template_description: string }[];
   courses: { course_id: number; course_code: string; course_name: string; section_number: string }[];
-  defaults: { startDate: string; endDate: string };
 }
 
-export function NewProjectForm({ templates, courses, defaults }: Props) {
+/** A date on this device as YYYY-MM-DD, `addDays` from today. */
+function localDate(addDays = 0): string {
+  const d = new Date();
+  d.setDate(d.getDate() + addDays);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+export function NewProjectForm({ templates, courses }: Props) {
   const [state, action] = useActionState(createProjectAction, {});
   const v = state.values ?? {};
   const [courseId, setCourseId] = useState(v.courseId || (courses[0] ? String(courses[0].course_id) : "new"));
+  // Default dates come from the instructor's own device, so they're never "tomorrow" in the evening.
+  const [startDate, setStartDate] = useState(v.startDate ?? "");
+  const [endDate, setEndDate] = useState(v.endDate ?? "");
+  useEffect(() => {
+    setStartDate((d) => d || localDate());
+    setEndDate((d) => d || localDate(98));
+  }, []);
 
   return (
     <form action={action} className="space-y-6" noValidate>
@@ -68,10 +81,10 @@ export function NewProjectForm({ templates, courses, defaults }: Props) {
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Start date" htmlFor="startDate">
-            <input id="startDate" name="startDate" type="date" defaultValue={v.startDate ?? defaults.startDate} className="field-input" />
+            <input id="startDate" name="startDate" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="field-input" />
           </Field>
           <Field label="Final due date" htmlFor="endDate">
-            <input id="endDate" name="endDate" type="date" defaultValue={v.endDate ?? defaults.endDate} className="field-input" />
+            <input id="endDate" name="endDate" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="field-input" />
           </Field>
         </div>
       </fieldset>

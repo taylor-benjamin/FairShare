@@ -257,7 +257,7 @@ export function isIsoDate(s: string): boolean {
 export type NextStep =
   | { kind: "upload"; title: string }
   | { kind: "publish"; title: string }
-  | { kind: "invites"; title: string }
+  | { kind: "invites"; title: string; teamId: number | null }
   | { kind: "add-milestone"; title: string }
   | { kind: "complete-milestone"; title: string; milestoneId: number }
   | null;
@@ -270,6 +270,8 @@ export function nextSetupStep(input: {
   teamCount: number;
   draftCount: number;
   pendingInvites: number;
+  /** A team that still has unused invites, so the action can open it directly. */
+  pendingTeamId?: number | null;
   milestones: { milestone_id: number; milestone_name: string; milestone_status: string; due_date: string }[];
   today: string; // YYYY-MM-DD
 }): NextStep {
@@ -278,6 +280,11 @@ export function nextSetupStep(input: {
   if (input.milestones.length === 0) return { kind: "add-milestone", title: "Add your first milestone. Completing it opens peer ratings." };
   const due = input.milestones.filter((m) => m.milestone_status === "open" && m.due_date <= input.today).sort((a, b) => a.due_date.localeCompare(b.due_date))[0];
   if (due) return { kind: "complete-milestone", title: `${due.milestone_name} is due. Mark it complete to open peer ratings.`, milestoneId: due.milestone_id };
-  if (input.pendingInvites > 0) return { kind: "invites", title: `${input.pendingInvites} ${input.pendingInvites === 1 ? "student hasn't" : "students haven't"} joined yet. Send them their link.` };
+  if (input.pendingInvites > 0)
+    return {
+      kind: "invites",
+      title: `${input.pendingInvites} ${input.pendingInvites === 1 ? "student hasn't" : "students haven't"} joined yet. Send them their link.`,
+      teamId: input.pendingTeamId ?? null,
+    };
   return null;
 }

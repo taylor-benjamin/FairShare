@@ -74,7 +74,7 @@ export default async function InstructorTeamPage({ params, searchParams }: { par
           <>
             {signal?.needsAttention ? (
               <div className="mb-6 rounded-(--radius-card) border border-primary/20 bg-primary-tint p-4 sm:p-5">
-                <p className="font-semibold text-primary">{signal.headline}</p>
+                <p className="font-semibold text-primary">Needs attention</p>
                 <ul className="mt-1 list-disc pl-5 text-small">
                   {signal.reasons.map((r) => (
                     <li key={r}>{r}</li>
