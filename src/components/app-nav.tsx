@@ -11,7 +11,7 @@ const linksFor = (role: SessionUser["role"]) =>
         { href: "/instructor/reviews", label: "Reviews" },
         { href: "/instructor/projects/new", label: "New project" },
       ]
-    : [{ href: "/teams", label: "My teams" }];
+    : [{ href: "/teams", label: "Dashboard" }];
 
 /** Thin top navigation shared by every signed-in page. */
 export function AppNav({ user }: { user: SessionUser }) {

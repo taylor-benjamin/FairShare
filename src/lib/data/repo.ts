@@ -143,8 +143,9 @@ export const teams = {
     ),
   byProject: (projectId: number) => all<TeamRow>("SELECT * FROM teams WHERE project_id = ? ORDER BY team_name", projectId),
   forStudent: (userId: number) =>
-    all<TeamContextRow & { access_level: AccessLevel }>(
-      `SELECT t.*, c.instructor_id, c.course_id, c.course_code, c.course_name, c.section_number, p.project_name, p.anonymous_evals, m.access_level
+    all<TeamContextRow & { access_level: AccessLevel; team_role: string | null; role_confirmed: number }>(
+      `SELECT t.*, c.instructor_id, c.course_id, c.course_code, c.course_name, c.section_number, p.project_name, p.anonymous_evals,
+              m.access_level, m.team_role, m.role_confirmed
        FROM team_memberships m JOIN teams t ON t.team_id = m.team_id JOIN projects p ON p.project_id = t.project_id
        JOIN courses c ON c.course_id = p.course_id
        WHERE m.user_id = ? AND t.channel_status <> 'draft' ORDER BY t.creation_date DESC`,
@@ -604,4 +605,60 @@ export const flags = {
   openCountByTeam: (teamId: number) => first<{ n: number }>("SELECT COUNT(*) AS n FROM integrity_flags WHERE team_id = ? AND review_status = 'open'", teamId),
   review: (flagId: number, status: "dismissed" | "confirmed") =>
     run("UPDATE integrity_flags SET review_status = ? WHERE flag_id = ? AND review_status = 'open'", status, flagId),
+};
+
+// ── Student dashboard: what's waiting for one student across their teams ─────
+
+export const studentDashboard = {
+  /** Teammates' pending entries this student hasn't confirmed or disputed yet, per team. */
+  awaitingMyReview: (userId: number) =>
+    all<{ team_id: number; n: number }>(
+      `SELECT c.team_id, COUNT(*) AS n
+       FROM contributions c
+       JOIN team_memberships m ON m.team_id = c.team_id AND m.user_id = ? AND m.access_level = 'write'
+       JOIN teams t ON t.team_id = c.team_id AND t.channel_status = 'published'
+       WHERE c.verification_status = 'pending' AND c.user_id <> ?
+         AND NOT EXISTS (SELECT 1 FROM verifications v WHERE v.contribution_id = c.contribution_id AND v.verifier_id = ?)
+       GROUP BY c.team_id`,
+      userId,
+      userId,
+      userId,
+    ),
+  /** Completed milestones the student hasn't rated yet (only teams with someone to rate). */
+  ratingsDue: (userId: number) =>
+    all<{ team_id: number; milestone_id: number; milestone_name: string }>(
+      `SELECT t.team_id, ms.milestone_id, ms.milestone_name
+       FROM team_memberships m
+       JOIN teams t ON t.team_id = m.team_id AND t.channel_status <> 'draft'
+       JOIN milestones ms ON ms.project_id = t.project_id AND ms.milestone_status = 'completed'
+       WHERE m.user_id = ? AND m.access_level = 'write'
+         AND (SELECT COUNT(*) FROM team_memberships m2 WHERE m2.team_id = t.team_id) > 1
+         AND NOT EXISTS (SELECT 1 FROM evaluations e WHERE e.milestone_id = ms.milestone_id AND e.team_id = t.team_id AND e.evaluator_id = ?)
+       ORDER BY ms.due_date`,
+      userId,
+      userId,
+    ),
+  /** The student's own work totals per team. */
+  myTotals: (userId: number) =>
+    all<{ team_id: number; confirmed_hours: number; confirmed: number; pending: number; disputed: number }>(
+      `SELECT m.team_id,
+              COALESCE(SUM(CASE WHEN c.verification_status = 'confirmed' THEN c.hours_spent END), 0) AS confirmed_hours,
+              COUNT(CASE WHEN c.verification_status = 'confirmed' THEN 1 END) AS confirmed,
+              COUNT(CASE WHEN c.verification_status = 'pending' THEN 1 END) AS pending,
+              COUNT(CASE WHEN c.verification_status = 'disputed' THEN 1 END) AS disputed
+       FROM team_memberships m
+       LEFT JOIN contributions c ON c.team_id = m.team_id AND c.user_id = m.user_id
+       WHERE m.user_id = ?
+       GROUP BY m.team_id`,
+      userId,
+    ),
+  /** The student's most recent logged entries across all their teams. */
+  myRecent: (userId: number, limit = 5) =>
+    all<ContributionRow & { team_name: string }>(
+      `SELECT c.*, t.team_name FROM contributions c JOIN teams t ON t.team_id = c.team_id
+       JOIN team_memberships m ON m.team_id = c.team_id AND m.user_id = c.user_id
+       WHERE c.user_id = ? ORDER BY c.logged_date DESC, c.contribution_id DESC LIMIT ?`,
+      userId,
+      limit,
+    ),
 };
