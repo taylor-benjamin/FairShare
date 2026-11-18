@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { LogoMark } from "./logo";
+import { MobileMenu } from "./mobile-menu";
 import { NavLinks } from "./nav-links";
 import { logoutAction } from "@/app/actions/auth";
 import type { SessionUser } from "@/lib/types";
@@ -23,7 +24,9 @@ export function AppNav({ user }: { user: SessionUser }) {
             Fair<span className="text-secondary">Share</span>
           </span>
         </Link>
-        <NavLinks links={linksFor(user.role)} />
+        <div className="hidden sm:block">
+          <NavLinks links={linksFor(user.role)} />
+        </div>
         <div className="ml-auto flex shrink-0 items-center gap-1.5 text-small sm:gap-3">
           {user.role === "instructor" && (
             <Link
@@ -49,9 +52,10 @@ export function AppNav({ user }: { user: SessionUser }) {
               <span className="block text-[12px] text-hint capitalize">{user.role}</span>
             </span>
           </span>
-          <form action={logoutAction}>
+          <form action={logoutAction} className="hidden sm:block">
             <button className="rounded-full px-2 py-1.5 whitespace-nowrap text-primary transition hover:bg-primary-tint sm:px-3">Log out</button>
           </form>
+          <MobileMenu links={linksFor(user.role)} name={`${user.firstName} ${user.lastName}`} role={user.role} />
         </div>
       </div>
     </nav>

@@ -79,6 +79,15 @@ body {
   line-height: 1.5;
 }
 
+/* iPhones zoom the page when you tap a field whose text is under 16px. Keep fields at 16px on phones. */
+@media (max-width: 639px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
 ::selection {
   background: var(--color-secondary-soft);
 }
