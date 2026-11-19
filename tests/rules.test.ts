@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  addDaysIso,
+  daysUntil,
+  dueLabel,
   detectIntegrityFlags,
   groupRosterByTeam,
   inactiveMembers,
@@ -228,5 +231,26 @@ describe("deleting tasks", () => {
     expect(canAnswerDeleteRequest(pending, DEVON)).toBe(false);
     expect(canAnswerDeleteRequest({ ...pending, delete_requested_by_id: null }, PRIYA)).toBe(false);
     expect(canAnswerDeleteRequest({ ...pending, has_work: true }, PRIYA)).toBe(false);
+  });
+});
+
+describe("due dates for notifications", () => {
+  it("adds days across month and year ends", () => {
+    expect(addDaysIso("2026-11-28", 7)).toBe("2026-12-05");
+    expect(addDaysIso("2026-12-30", 3)).toBe("2027-01-02");
+    expect(addDaysIso("2028-02-28", 1)).toBe("2028-02-29");
+  });
+  it("counts whole days, negative when overdue", () => {
+    expect(daysUntil("2026-11-19", "2026-11-19")).toBe(0);
+    expect(daysUntil("2026-11-22", "2026-11-19")).toBe(3);
+    expect(daysUntil("2026-11-17", "2026-11-19")).toBe(-2);
+    expect(daysUntil("2026-11-20T00:00:00Z", "2026-11-19")).toBe(1);
+  });
+  it("labels the due date", () => {
+    expect(dueLabel("2026-11-18", "2026-11-19")).toBe("Overdue by 1 day");
+    expect(dueLabel("2026-11-16", "2026-11-19")).toBe("Overdue by 3 days");
+    expect(dueLabel("2026-11-19", "2026-11-19")).toBe("Due today");
+    expect(dueLabel("2026-11-20", "2026-11-19")).toBe("Due tomorrow");
+    expect(dueLabel("2026-11-26", "2026-11-19")).toBe("Due in 7 days");
   });
 });

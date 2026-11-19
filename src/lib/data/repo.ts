@@ -113,6 +113,16 @@ export const projects = {
 };
 
 export const milestones = {
+  /** Open milestones in this instructor's projects due on or before `until` (YYYY-MM-DD), overdue ones included. */
+  openDueForInstructor: (instructorId: number, until: string) =>
+    all<{ milestone_id: number; milestone_name: string; due_date: string; project_id: number; project_name: string }>(
+      `SELECT ms.milestone_id, ms.milestone_name, ms.due_date, p.project_id, p.project_name
+       FROM milestones ms JOIN projects p ON p.project_id = ms.project_id JOIN courses co ON co.course_id = p.course_id
+       WHERE co.instructor_id = ? AND ms.milestone_status = 'open' AND substr(ms.due_date, 1, 10) <= ?
+       ORDER BY ms.due_date`,
+      instructorId,
+      until,
+    ),
   byId: (id: number) => first<MilestoneRow>("SELECT * FROM milestones WHERE milestone_id = ?", id),
   byProject: (projectId: number) => all<MilestoneRow>("SELECT * FROM milestones WHERE project_id = ? ORDER BY due_date, milestone_id", projectId),
   create: (projectId: number, name: string, dueDate: string) =>
@@ -580,6 +590,14 @@ export const disputes = {
        ORDER BY d.opened_date ${status === "open" ? "ASC" : "DESC"}`,
       instructorId,
     ),
+  openCountForInstructor: (instructorId: number) =>
+    first<{ n: number }>(
+      `SELECT COUNT(*) AS n FROM disputes d JOIN verifications v ON v.verification_id = d.verification_id
+       JOIN contributions c ON c.contribution_id = v.contribution_id JOIN teams t ON t.team_id = c.team_id
+       JOIN projects p ON p.project_id = t.project_id JOIN courses co ON co.course_id = p.course_id
+       WHERE co.instructor_id = ? AND d.dispute_status = 'open'`,
+      instructorId,
+    ),
   openCountByTeam: (teamId: number) =>
     first<{ n: number }>(
       `SELECT COUNT(*) AS n FROM disputes d JOIN verifications v ON v.verification_id = d.verification_id
@@ -674,6 +692,13 @@ export const flags = {
        ORDER BY f.flagged_date DESC`,
       instructorId,
     ),
+  openCountForInstructor: (instructorId: number) =>
+    first<{ n: number }>(
+      `SELECT COUNT(*) AS n FROM integrity_flags f JOIN teams t ON t.team_id = f.team_id
+       JOIN projects p ON p.project_id = t.project_id JOIN courses co ON co.course_id = p.course_id
+       WHERE co.instructor_id = ? AND f.review_status = 'open'`,
+      instructorId,
+    ),
   openCountByTeam: (teamId: number) => first<{ n: number }>("SELECT COUNT(*) AS n FROM integrity_flags WHERE team_id = ? AND review_status = 'open'", teamId),
   review: (flagId: number, status: "dismissed" | "confirmed") =>
     run("UPDATE integrity_flags SET review_status = ? WHERE flag_id = ? AND review_status = 'open'", status, flagId),
@@ -682,6 +707,42 @@ export const flags = {
 // ── Student dashboard: what's waiting for one student across their teams ─────
 
 export const studentDashboard = {
+  /** Unfinished tasks this student owns that are due on or before `until` (YYYY-MM-DD), in published teams. */
+  myTaskDeadlines: (userId: number, until: string) =>
+    all<{ team_id: number; task_id: number; task_title: string; due_date: string }>(
+      `SELECT t.team_id, t.task_id, t.task_title, t.due_date
+       FROM tasks t
+       JOIN teams tm ON tm.team_id = t.team_id AND tm.channel_status = 'published'
+       WHERE t.user_id = ? AND t.deleted_date IS NULL AND t.task_status <> 'done'
+         AND t.due_date IS NOT NULL AND substr(t.due_date, 1, 10) <= ?
+       ORDER BY t.due_date`,
+      userId,
+      until,
+    ),
+  /** Open milestones due between `from` and `until` (YYYY-MM-DD) for the student's published teams. */
+  myMilestoneDeadlines: (userId: number, from: string, until: string) =>
+    all<{ team_id: number; milestone_id: number; milestone_name: string; due_date: string }>(
+      `SELECT t.team_id, ms.milestone_id, ms.milestone_name, ms.due_date
+       FROM team_memberships m
+       JOIN teams t ON t.team_id = m.team_id AND t.channel_status = 'published'
+       JOIN milestones ms ON ms.project_id = t.project_id AND ms.milestone_status = 'open'
+       WHERE m.user_id = ? AND substr(ms.due_date, 1, 10) BETWEEN ? AND ?
+       ORDER BY ms.due_date`,
+      userId,
+      from,
+      until,
+    ),
+  /** The student's own entries that a teammate disputed and the instructor hasn't resolved yet. */
+  myOpenDisputes: (userId: number) =>
+    all<{ team_id: number; contribution_id: number; description: string }>(
+      `SELECT c.team_id, c.contribution_id, c.description
+       FROM disputes d
+       JOIN verifications v ON v.verification_id = d.verification_id
+       JOIN contributions c ON c.contribution_id = v.contribution_id
+       WHERE c.user_id = ? AND d.dispute_status = 'open'
+       ORDER BY d.opened_date`,
+      userId,
+    ),
   /** Tasks this student owns that a teammate has asked to delete, in published teams. */
   deleteRequestsForMe: (userId: number) =>
     all<{ team_id: number; task_id: number; task_title: string; requester_first: string }>(

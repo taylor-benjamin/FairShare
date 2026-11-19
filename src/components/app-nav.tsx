@@ -2,8 +2,10 @@ import Link from "next/link";
 import { LogoMark } from "./logo";
 import { MobileMenu } from "./mobile-menu";
 import { NavLinks } from "./nav-links";
+import { NotificationBell } from "./notification-bell";
 import { logoutAction } from "@/app/actions/auth";
-import type { SessionUser } from "@/lib/types";
+import { getNotifications } from "@/lib/services/notifications";
+import type { AppNotification, SessionUser } from "@/lib/types";
 
 const linksFor = (role: SessionUser["role"]) =>
   role === "instructor"
@@ -14,7 +16,12 @@ const linksFor = (role: SessionUser["role"]) =>
     : [{ href: "/teams", label: "Dashboard" }];
 
 /** Thin top navigation shared by every signed-in page. */
-export function AppNav({ user }: { user: SessionUser }) {
+export async function AppNav({ user }: { user: SessionUser }) {
+  // The bell is a convenience: if loading it fails, show the page anyway.
+  let notifications: AppNotification[] = [];
+  try {
+    notifications = await getNotifications(user);
+  } catch {}
   return (
     <nav className="sticky top-0 z-20 border-b border-line/70 bg-surface/85 backdrop-blur-md">
       <div className="flex w-full items-center gap-x-2 gap-y-1 px-4 py-2.5 sm:gap-x-4 sm:px-6 lg:px-8">
@@ -40,6 +47,7 @@ export function AppNav({ user }: { user: SessionUser }) {
               <span className="hidden sm:inline">New project</span>
             </Link>
           )}
+          <NotificationBell items={notifications} />
           <span className="hidden items-center gap-2 sm:inline-flex">
             <span aria-hidden className="grid size-8 place-items-center rounded-full bg-primary text-[12px] font-semibold text-white ring-2 ring-secondary/60 ring-offset-2">
               {user.firstName[0]}

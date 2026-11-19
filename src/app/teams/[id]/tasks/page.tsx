@@ -2,6 +2,7 @@ import { addTaskAction, answerDeleteRequestAction, cancelDeleteRequestAction, de
 import { ConfirmAction } from "@/components/confirm-action";
 import { handlePageError } from "@/components/access-denied";
 import { ActionForm, SubmitButton } from "@/components/forms";
+import { DatePicker } from "@/components/date-picker";
 import { EmptyState, Field, formatDate, Page } from "@/components/ui";
 import { requireUser } from "@/lib/auth/session";
 import { getChannel } from "@/lib/services/contribution-service";
@@ -49,7 +50,7 @@ export default async function TasksPage({ params }: { params: Promise<{ id: stri
               </select>
             </Field>
             <Field label="Due date (optional)" htmlFor="dueDate">
-              <input id="dueDate" name="dueDate" type="date" className="field-input" />
+              <DatePicker id="dueDate" name="dueDate" clearable placeholder="No due date" />
             </Field>
             <SubmitButton full pendingText="Adding…">
               Add task

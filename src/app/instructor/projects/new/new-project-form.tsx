@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useState } from "react";
 import { createProjectAction } from "@/app/actions/instructor";
 import { SubmitButton } from "@/components/forms";
+import { DatePicker } from "@/components/date-picker";
 import { Field, LinkButton } from "@/components/ui";
 
 interface Props {
@@ -81,10 +82,10 @@ export function NewProjectForm({ templates, courses }: Props) {
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Start date" htmlFor="startDate">
-            <input id="startDate" name="startDate" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="field-input" />
+            <DatePicker id="startDate" name="startDate" value={startDate} onChange={setStartDate} />
           </Field>
           <Field label="Final due date" htmlFor="endDate">
-            <input id="endDate" name="endDate" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="field-input" />
+            <DatePicker id="endDate" name="endDate" value={endDate} onChange={setEndDate} min={startDate || undefined} />
           </Field>
         </div>
       </fieldset>

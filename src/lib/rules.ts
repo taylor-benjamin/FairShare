@@ -329,3 +329,29 @@ export function taskDeleteMode(task: TaskForDelete, userId: number): "delete" | 
 export function canAnswerDeleteRequest(task: TaskForDelete, userId: number): boolean {
   return !task.has_work && task.delete_requested_by_id !== null && task.user_id === userId;
 }
+
+// ── Notifications: due dates ─────────────────────────────────────────────────
+
+/** Adds `n` days to a YYYY-MM-DD date. */
+export function addDaysIso(date: string, n: number): string {
+  const [y, m, d] = date.slice(0, 10).split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
+}
+
+/** Whole days from `today` to `due` (both YYYY-MM-DD). Negative when it's overdue. */
+export function daysUntil(due: string, today: string): number {
+  const t = (s: string) => {
+    const [y, m, d] = s.slice(0, 10).split("-").map(Number);
+    return Date.UTC(y, m - 1, d);
+  };
+  return Math.round((t(due) - t(today)) / 86_400_000);
+}
+
+/** "Overdue by 2 days", "Due today", "Due tomorrow", "Due in 3 days". */
+export function dueLabel(due: string, today: string): string {
+  const n = daysUntil(due, today);
+  if (n < 0) return `Overdue by ${-n} ${n === -1 ? "day" : "days"}`;
+  if (n === 0) return "Due today";
+  if (n === 1) return "Due tomorrow";
+  return `Due in ${n} days`;
+}

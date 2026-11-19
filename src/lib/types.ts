@@ -180,3 +180,14 @@ export interface FlagRow {
   review_status: FlagStatus;
   flagged_date: string;
 }
+
+/** One item in the notifications menu. Built fresh from the data on each page load; nothing is stored. */
+export interface AppNotification {
+  key: string;
+  label: string;
+  /** Second line, e.g. "Due tomorrow · Team 3". */
+  detail?: string;
+  href: string;
+  /** overdue = red, deadline = amber, review = blue (something to do), warning = orange (something to fix). */
+  tone: "overdue" | "deadline" | "review" | "warning";
+}

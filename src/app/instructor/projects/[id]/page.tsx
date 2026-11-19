@@ -3,6 +3,7 @@ import { addMilestoneAction, completeMilestoneAction, deleteProjectAction, publi
 import { appUrl } from "@/app/actions/helpers";
 import { CopyLink } from "@/components/copy-link";
 import { DangerZone } from "@/components/danger-zone";
+import { DatePicker } from "@/components/date-picker";
 import { handlePageError } from "@/components/access-denied";
 import { ActionForm, SubmitButton } from "@/components/forms";
 import { NextStepCard } from "@/components/next-step";
@@ -180,7 +181,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
                 <input id="ms-name" name="name" maxLength={100} placeholder="Milestone 3: Final report" className="field-input" />
               </Field>
               <Field label="Due date" htmlFor="ms-due">
-                <input id="ms-due" name="dueDate" type="date" className="field-input" />
+                <DatePicker id="ms-due" name="dueDate" />
               </Field>
               <SubmitButton small pendingText="Adding…">
                 Add milestone

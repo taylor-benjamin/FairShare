@@ -11,23 +11,22 @@ export interface TodoItem {
   tone: "review" | "warning";
 }
 
-export async function getStudentDashboard(user: SessionUser | null) {
-  if (!user || user.role !== "student") return null;
-
+/**
+ * The student's teams and everything waiting on them (to confirm, to rate, delete requests, charter steps).
+ * Shared by the dashboard's To do list and the notifications menu.
+ */
+export async function loadStudentTodos(user: SessionUser) {
   const myTeams = await teams.forStudent(user.userId);
   // Every team still passes the single permission check before its data is shown.
   await Promise.all(myTeams.map((t) => authorizeTeam(user, "team.read", t.team_id)));
 
-  const [review, ratings, totals, recent, deleteRequests] = await Promise.all([
+  const [review, ratings, deleteRequests] = await Promise.all([
     studentDashboard.awaitingMyReview(user.userId),
     studentDashboard.ratingsDue(user.userId),
-    studentDashboard.myTotals(user.userId),
-    studentDashboard.myRecent(user.userId),
     studentDashboard.deleteRequestsForMe(user.userId),
   ]);
 
   const reviewBy = new Map(review.map((r) => [r.team_id, r.n]));
-  const totalsBy = new Map(totals.map((r) => [r.team_id, r]));
   const multiTeam = myTeams.length > 1;
   const inTeam = (name: string) => (multiTeam ? ` in ${name}` : "");
 
@@ -54,6 +53,16 @@ export async function getStudentDashboard(user: SessionUser | null) {
       todos.push({ key: `agree-${t.team_id}`, label: `Agree to the team charter${inTeam(t.team_name)}`, href: `/teams/${t.team_id}/charter`, tone: "warning" });
     }
   }
+
+  return { myTeams, review, ratings, todos, multiTeam, reviewBy };
+}
+
+export async function getStudentDashboard(user: SessionUser | null) {
+  if (!user || user.role !== "student") return null;
+
+  const { myTeams, review, ratings, todos, multiTeam, reviewBy } = await loadStudentTodos(user);
+  const [totals, recent] = await Promise.all([studentDashboard.myTotals(user.userId), studentDashboard.myRecent(user.userId)]);
+  const totalsBy = new Map(totals.map((r) => [r.team_id, r]));
 
   const teamCards = myTeams.map((t) => {
     const tot = totalsBy.get(t.team_id);

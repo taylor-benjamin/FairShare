@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import type { ActionState } from "@/lib/action-state";
 import { SubmitButton } from "@/components/forms";
+import { DatePicker } from "@/components/date-picker";
 import { Field } from "@/components/ui";
 
 /** P09 — the under-a-minute log form. Only "What did you do?" is required; today's date is pre-filled. */
@@ -72,16 +73,7 @@ export function LogTaskForm({ action: serverAction, tasks }: { action: (prev: Ac
           />
         </Field>
         <Field label="Completed on" htmlFor="completionDate" error={fe.completionDate}>
-          <input
-            id="completionDate"
-            name="completionDate"
-            type="date"
-            max={today || undefined}
-            className="field-input"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            aria-invalid={!!fe.completionDate}
-          />
+          <DatePicker id="completionDate" name="completionDate" max={today || undefined} value={date} onChange={setDate} invalid={!!fe.completionDate} />
         </Field>
       </div>
       {tasks.length > 0 && (
