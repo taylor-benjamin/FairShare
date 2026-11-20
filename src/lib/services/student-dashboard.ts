@@ -1,6 +1,7 @@
 // Student Dashboard Service: one student's to-dos, teams and recent work across all their teams.
 import "server-only";
 import { studentDashboard, teams } from "../data/repo";
+import { addDaysIso, daysUntil, dueLabel } from "../rules";
 import type { SessionUser } from "../types";
 import { authorizeTeam } from "./common";
 
@@ -61,7 +62,23 @@ export async function getStudentDashboard(user: SessionUser | null) {
   if (!user || user.role !== "student") return null;
 
   const { myTeams, review, ratings, todos, multiTeam, reviewBy } = await loadStudentTodos(user);
-  const [totals, recent] = await Promise.all([studentDashboard.myTotals(user.userId), studentDashboard.myRecent(user.userId)]);
+  const today = new Date().toISOString().slice(0, 10);
+  const until = addDaysIso(today, 14);
+  const [totals, recent, taskDue, milestoneDue] = await Promise.all([
+    studentDashboard.myTotals(user.userId),
+    studentDashboard.myRecent(user.userId),
+    studentDashboard.myTaskDeadlines(user.userId, until),
+    studentDashboard.myMilestoneDeadlines(user.userId, today, until),
+  ]);
+  const teamName = (id: number) => myTeams.find((t) => t.team_id === id)?.team_name ?? "";
+  // My unfinished tasks (overdue included) and the team's milestones, for the next two weeks.
+  const deadlines = [
+    ...taskDue.map((t) => ({ key: `task-${t.task_id}`, title: t.task_title, kind: "Task" as const, teamId: t.team_id, href: `/teams/${t.team_id}/tasks`, due: t.due_date })),
+    ...milestoneDue.map((m) => ({ key: `ms-${m.team_id}-${m.milestone_id}`, title: m.milestone_name, kind: "Milestone" as const, teamId: m.team_id, href: `/teams/${m.team_id}`, due: m.due_date })),
+  ]
+    .filter((d) => teamName(d.teamId))
+    .sort((a, b) => a.due.localeCompare(b.due))
+    .map((d) => ({ ...d, teamName: teamName(d.teamId), when: dueLabel(d.due, today), overdue: daysUntil(d.due, today) < 0 }));
   const totalsBy = new Map(totals.map((r) => [r.team_id, r]));
 
   const teamCards = myTeams.map((t) => {
@@ -80,6 +97,7 @@ export async function getStudentDashboard(user: SessionUser | null) {
 
   return {
     todos,
+    deadlines,
     teams: teamCards,
     recent: recent.map((c) => ({
       id: c.contribution_id,

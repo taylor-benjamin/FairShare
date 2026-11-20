@@ -4,11 +4,12 @@ import { appUrl } from "@/app/actions/helpers";
 import { CopyLink } from "@/components/copy-link";
 import { DangerZone } from "@/components/danger-zone";
 import { DatePicker } from "@/components/date-picker";
+import { MoreMenu } from "@/components/more-menu";
 import { handlePageError } from "@/components/access-denied";
 import { ActionForm, SubmitButton } from "@/components/forms";
 import { NextStepCard } from "@/components/next-step";
 import { Stepper } from "@/components/stepper";
-import { ArrowIcon, Chip, EmptyState, Field, formatDate, HeaderBar, LinkButton, Notice, Page, PageTabs } from "@/components/ui";
+import { ArrowIcon, Chip, EmptyState, Field, formatDate, HeaderBar, LinkButton, Notice, Page, PageTabs, Panel } from "@/components/ui";
 import { requireUser } from "@/lib/auth/session";
 import { getSetupOverview, projectNextStep } from "@/lib/services/class-setup";
 
@@ -101,134 +102,142 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
           ]}
         />
 
-        {tab === "teams" &&
-          (teams.length === 0 ? (
-            <EmptyState title="No teams yet">Upload your class list to create them.</EmptyState>
-          ) : (
-            <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {teams.map((t) => {
-                const joined = t.invitations.filter((i) => i.invite_status === "accepted").length;
-                const pending = t.invitations.filter((i) => i.invite_status === "pending");
-                const isDraft = t.channel_status === "draft";
-                return (
-                  <li key={t.team_id} className="card flex flex-col p-4">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="font-semibold">{t.team_name}</p>
-                      <Chip tone={isDraft || t.channel_status === "finished" ? "pending" : "confirmed"}>
-                        {isDraft ? "Draft" : t.channel_status === "finished" ? "Finished" : "Active"}
-                      </Chip>
-                    </div>
-                    <p className="mt-1 text-small text-hint">{isDraft ? `${t.invitations.length} students to invite` : `${joined} of ${t.invitations.length} joined`}</p>
-                    {!isDraft && pending.length > 0 && (
-                      <ul className="mt-2 divide-y divide-line/70 text-small">
-                        {pending.map((i) => (
-                          <li key={i.invitation_id} className="py-1.5">
-                            <p className="truncate">{i.invited_email}</p>
-                            <div className="mt-0.5 flex flex-wrap items-center gap-1">
-                              <CopyLink url={`${base}/invite/${i.invite_token}`} />
-                              <ActionForm action={resendInviteAction.bind(null, i.invitation_id, projectId)} className="flex flex-wrap items-center gap-x-2">
-                                <SubmitButton variant="ghost" small pendingText="Sending…" className="!border-0 !px-2.5 !py-1 !text-primary hover:!bg-primary-tint">
-                                  Resend
-                                </SubmitButton>
-                              </ActionForm>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
+        {tab === "teams" && (
+          <Panel title="Teams" tone="primary" menus count={teams.length} empty="No teams yet. Upload your class list to create them.">
+            {teams.map((t) => {
+              const joined = t.invitations.filter((i) => i.invite_status === "accepted").length;
+              const pending = t.invitations.filter((i) => i.invite_status === "pending");
+              const isDraft = t.channel_status === "draft";
+              return (
+                <li key={t.team_id} className="px-4 py-3.5 sm:px-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="min-w-0">
+                      <span className="flex flex-wrap items-center gap-2">
+                        <span className="font-semibold">{t.team_name}</span>
+                        <Chip tone={isDraft || t.channel_status === "finished" ? "pending" : "confirmed"}>
+                          {isDraft ? "Draft" : t.channel_status === "finished" ? "Finished" : "Active"}
+                        </Chip>
+                      </span>
+                      <span className={`block text-small ${!isDraft && pending.length > 0 ? "text-secondary-ink" : "text-hint"}`}>
+                        {isDraft ? `${t.invitations.length} students to invite` : `${joined} of ${t.invitations.length} joined`}
+                      </span>
+                    </span>
                     {!isDraft && (
-                      <Link href={`/instructor/teams/${t.team_id}`} className="link mt-auto inline-flex items-center gap-1 pt-3 text-small">
+                      <Link href={`/instructor/teams/${t.team_id}`} className="link inline-flex shrink-0 items-center gap-1 text-small">
                         Open team <ArrowIcon />
                       </Link>
                     )}
-                  </li>
-                );
-              })}
-            </ul>
-          ))}
+                  </div>
+                  {!isDraft && pending.length > 0 && (
+                    <ul className="mt-2 space-y-1.5">
+                      {pending.map((i) => (
+                        <li key={i.invitation_id} className="flex items-center justify-between gap-2 rounded-xl bg-secondary-tint py-1.5 pr-1.5 pl-3 text-small">
+                          <span className="min-w-0 truncate">{i.invited_email}</span>
+                          <span className="flex shrink-0 items-center">
+                            <CopyLink url={`${base}/invite/${i.invite_token}`} />
+                            <MoreMenu label={`Invite actions for ${i.invited_email}`}>
+                              <ActionForm action={resendInviteAction.bind(null, i.invitation_id, projectId)}>
+                                <button className="menu-item">Resend email</button>
+                              </ActionForm>
+                            </MoreMenu>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              );
+            })}
+          </Panel>
+        )}
 
         {tab === "milestones" && (
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-            <section>
-              <p className="mb-3 text-small text-hint">Completing a milestone opens peer ratings for it.</p>
-              {milestones.length === 0 ? (
-                <EmptyState title="No milestones yet" />
-              ) : (
-                <ul className="space-y-2">
-                  {milestones.map((m) => (
-                    <li key={m.milestone_id} className="card flex flex-wrap items-center justify-between gap-3 p-4">
-                      <div>
-                        <p className="font-semibold">{m.milestone_name}</p>
-                        <p className="text-small text-hint">Due {formatDate(m.due_date, true)}</p>
-                      </div>
-                      {m.milestone_status === "completed" ? (
-                        <Chip tone="confirmed">Complete</Chip>
-                      ) : (
-                        <ActionForm action={completeMilestoneAction.bind(null, m.milestone_id, projectId)}>
-                          <SubmitButton variant="secondary" small pendingText="Saving…">
-                            Mark complete
-                          </SubmitButton>
-                        </ActionForm>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
+          <div className="grid items-start gap-4 sm:gap-6 md:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+            <Panel title="Milestones" tone="primary" count={milestones.length} empty="No milestones yet. Add the first one.">
+              {milestones.map((m) => (
+                <li key={m.milestone_id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3.5 sm:px-5">
+                  <span className="min-w-0">
+                    <span className="block font-semibold">{m.milestone_name}</span>
+                    <span className="block text-small text-hint">Due {formatDate(m.due_date, true)}</span>
+                  </span>
+                  {m.milestone_status === "completed" ? (
+                    <Chip tone="confirmed">Complete · ratings open</Chip>
+                  ) : (
+                    <ActionForm action={completeMilestoneAction.bind(null, m.milestone_id, projectId)}>
+                      <SubmitButton variant="secondary" small pendingText="Saving…">
+                        Mark complete
+                      </SubmitButton>
+                    </ActionForm>
+                  )}
+                </li>
+              ))}
+            </Panel>
+            <section className="card">
+              <div className="card-head rounded-t-(--radius-card) bg-secondary-tint">
+                <h2 className="flex items-center gap-2">
+                  <span aria-hidden className="size-2 rounded-full bg-secondary" />
+                  Add a milestone
+                </h2>
+              </div>
+              <ActionForm action={addMilestoneAction.bind(null, projectId)} resetOnSuccess className="space-y-3 p-4 sm:p-5">
+                <Field label="Name" htmlFor="ms-name">
+                  <input id="ms-name" name="name" maxLength={100} placeholder="Milestone 3: Final report" className="field-input" />
+                </Field>
+                <Field label="Due date" htmlFor="ms-due">
+                  <DatePicker id="ms-due" name="dueDate" />
+                </Field>
+                <p className="text-small text-hint">Completing a milestone opens peer ratings for it.</p>
+                <SubmitButton full pendingText="Adding…">
+                  Add milestone
+                </SubmitButton>
+              </ActionForm>
             </section>
-            <ActionForm action={addMilestoneAction.bind(null, projectId)} resetOnSuccess className="card h-fit space-y-3 p-4">
-              <p className="font-semibold">Add a milestone</p>
-              <Field label="Name" htmlFor="ms-name">
-                <input id="ms-name" name="name" maxLength={100} placeholder="Milestone 3: Final report" className="field-input" />
-              </Field>
-              <Field label="Due date" htmlFor="ms-due">
-                <DatePicker id="ms-due" name="dueDate" />
-              </Field>
-              <SubmitButton small pendingText="Adding…">
-                Add milestone
-              </SubmitButton>
-            </ActionForm>
           </div>
         )}
 
         {tab === "settings" && (
-          <div className="max-w-2xl space-y-6">
-            <section className="card p-4 sm:p-5">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="font-semibold">Peer ratings</p>
-                  <p className="text-small text-hint">{settings.anonymous ? "Anonymous: students never see who rated them." : "Named: students see who gave each rating."}</p>
-                </div>
-                <LinkButton href={`${href}/settings`} variant="secondary" small>
-                  Change
-                </LinkButton>
-              </div>
-            </section>
-            {drafts.length > 0 && (
+          <div className="grid items-start gap-4 sm:gap-6 md:grid-cols-2">
+            <div className="space-y-4 sm:space-y-6">
               <section className="card p-4 sm:p-5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <p className="font-semibold">Class list</p>
-                    <p className="text-small text-hint">Replace the unpublished teams with a new list.</p>
+                    <p className="font-semibold">Peer ratings</p>
+                    <p className="text-small text-hint">{settings.anonymous ? "Anonymous: students never see who rated them." : "Named: students see who gave each rating."}</p>
                   </div>
-                  <LinkButton href={`${href}/roster`} variant="secondary" small>
-                    Replace list
+                  <LinkButton href={`${href}/settings`} variant="secondary" small>
+                    Change
                   </LinkButton>
                 </div>
               </section>
-            )}
-            <DangerZone
-              action={deleteProjectAction.bind(null, projectId)}
-              thing="project"
-              name={project.project_name}
-              consequences={[
-                `All ${teams.length} team ${teams.length === 1 ? "channel" : "channels"} in this project`,
-                "Every work log entry, confirmation, dispute, rating, comment and flag in those teams",
-                `The project's ${milestones.length} ${milestones.length === 1 ? "milestone" : "milestones"}, charters, tasks and invite links`,
-              ]}
-            />
-            <p className="text-small text-hint">
-              The course ({project.course_code} Section {project.section_number}) is kept so you can start a new project in it.
-            </p>
+              {drafts.length > 0 && (
+                <section className="card p-4 sm:p-5">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="font-semibold">Class list</p>
+                      <p className="text-small text-hint">Replace the unpublished teams with a new list.</p>
+                    </div>
+                    <LinkButton href={`${href}/roster`} variant="secondary" small>
+                      Replace list
+                    </LinkButton>
+                  </div>
+                </section>
+              )}
+            </div>
+            <div className="space-y-2">
+              <DangerZone
+                action={deleteProjectAction.bind(null, projectId)}
+                thing="project"
+                name={project.project_name}
+                consequences={[
+                  `All ${teams.length} team ${teams.length === 1 ? "channel" : "channels"} in this project`,
+                  "Every work log entry, confirmation, dispute, rating, comment and flag in those teams",
+                  `The project's ${milestones.length} ${milestones.length === 1 ? "milestone" : "milestones"}, charters, tasks and invite links`,
+                ]}
+              />
+              <p className="text-small text-hint">
+                The course ({project.course_code} Section {project.section_number}) is kept so you can start a new project in it.
+              </p>
+            </div>
           </div>
         )}
       </Page>

@@ -11,6 +11,7 @@ export function ConfirmAction({
   confirm,
   pendingText = "…",
   tone = "danger",
+  menu = false,
 }: {
   action: (prev: ActionState, fd: FormData) => Promise<ActionState>;
   label: string;
@@ -18,6 +19,8 @@ export function ConfirmAction({
   pendingText?: string;
   /** "danger" for removing things, "plain" for reversible steps like reopening the charter. */
   tone?: "danger" | "plain";
+  /** Render as a row in a dropdown menu instead of a small button. */
+  menu?: boolean;
 }) {
   const [state, action] = useActionState(serverAction, {});
   return (
@@ -26,11 +29,15 @@ export function ConfirmAction({
       onSubmit={(e) => {
         if (!window.confirm(confirm)) e.preventDefault();
       }}
-      className="inline-flex items-center gap-2"
+      className={menu ? "block" : "inline-flex items-center gap-2"}
     >
-      <SubmitButton variant="ghost" small pendingText={pendingText} className={tone === "danger" ? "!border-0 !px-2.5 !py-1 !text-disputed hover:!bg-disputed-soft" : ""}>
-        {label}
-      </SubmitButton>
+      {menu ? (
+        <button className={`menu-item ${tone === "danger" ? "text-disputed hover:bg-disputed-soft" : ""}`}>{label}</button>
+      ) : (
+        <SubmitButton variant="ghost" small pendingText={pendingText} className={tone === "danger" ? "!border-0 !px-2.5 !py-1 !text-disputed hover:!bg-disputed-soft" : ""}>
+          {label}
+        </SubmitButton>
+      )}
       {state.error && <span className="text-small text-disputed">{state.error}</span>}
     </form>
   );

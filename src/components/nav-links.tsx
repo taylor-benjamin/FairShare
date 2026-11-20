@@ -4,11 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 /** Top-nav links as pills; the current section gets a soft blue pill. */
-export function NavLinks({ links }: { links: { href: string; label: string }[] }) {
+export function NavLinks({ links }: { links: { href: string; label: string; exact?: boolean }[] }) {
   const path = usePathname();
   // Longest matching prefix wins, so /instructor/reviews doesn't also light up /instructor.
   const active = links
-    .filter((l) => path === l.href || path.startsWith(l.href + "/"))
+    .filter((l) => path === l.href || (!l.exact && path.startsWith(l.href + "/")))
     .sort((a, b) => b.href.length - a.href.length)[0]?.href;
   return (
     <div className="flex shrink-0 items-center gap-1 text-small">

@@ -40,7 +40,6 @@ export function LogTaskForm({ action: serverAction, tasks }: { action: (prev: Ac
 
   return (
     <form ref={ref} action={action} className="space-y-4" noValidate>
-      <p className="section-label">Log a completed task</p>
       <Field label="What did you do?" htmlFor="description" error={fe.description}>
         <input
           id="description"
@@ -55,7 +54,7 @@ export function LogTaskForm({ action: serverAction, tasks }: { action: (prev: Ac
           required
         />
       </Field>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-3">
         <Field label="Hours" htmlFor="hours" error={fe.hours}>
           <input
             id="hours"

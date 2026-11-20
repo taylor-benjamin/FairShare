@@ -1,6 +1,5 @@
-import Link from "next/link";
 import { AppNav } from "@/components/app-nav";
-import { ArrowIcon, Chip, EmptyState, formatDate, formatHours, HeaderBar, Page, StatTile } from "@/components/ui";
+import { Chip, EmptyState, formatDate, formatHours, HeaderBar, Page, Panel, RowLink, StatTile } from "@/components/ui";
 import { requireUser } from "@/lib/auth/session";
 import { getStudentDashboard } from "@/lib/services/student-dashboard";
 
@@ -12,7 +11,7 @@ const statusChip = {
   disputed: <Chip tone="disputed">Disputed</Chip>,
 } as const;
 
-/** The student's home after logging in: what needs them, their teams, and their recent work. */
+/** The student's home after logging in: what needs them, what's due, their teams, and their recent work. */
 export default async function StudentDashboard() {
   const user = await requireUser(["student"]);
   const data = await getStudentDashboard(user);
@@ -20,7 +19,7 @@ export default async function StudentDashboard() {
   return (
     <>
       <AppNav user={user} />
-      <HeaderBar title={`Hi, ${user.firstName}`} subtitle="Your dashboard" />
+      <HeaderBar title={`Hi, ${user.firstName}`} subtitle="Here's what needs you today" />
       <Page>
         {!data || data.teams.length === 0 ? (
           <div className="mx-auto max-w-2xl">
@@ -28,128 +27,76 @@ export default async function StudentDashboard() {
           </div>
         ) : (
           <>
-            <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-              <StatTile label="To confirm" value={data.stats.toConfirm} caption="teammates' entries" tone="primary" icon={<CheckIcon />} />
-              <StatTile label="Ratings due" value={data.stats.ratingsDue} caption="completed milestones" tone="secondary" icon={<StarIcon />} />
-              <StatTile label="Confirmed hours" value={formatHours(data.stats.confirmedHours) || "0 h"} caption="your verified work" tone="confirmed" icon={<ClockIcon />} />
-              <StatTile label="Disputed" value={data.stats.disputed} caption="of your entries" tone="disputed" icon={<FlagIcon />} />
+            <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+              <StatTile label="To confirm" value={data.stats.toConfirm} caption="teammates' entries" tone="primary" />
+              <StatTile label="Ratings due" value={data.stats.ratingsDue} caption="completed milestones" tone="secondary" />
+              <StatTile label="Confirmed hours" value={formatHours(data.stats.confirmedHours) || "0 h"} caption="your verified work" tone="confirmed" />
+              <StatTile label="Disputed" value={data.stats.disputed} caption="of your entries" tone="disputed" />
             </div>
 
-            <div className="grid gap-8 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-              <div className="space-y-8">
-                <section aria-labelledby="todo-heading">
-                  <h2 id="todo-heading" className="section-label mb-3">
-                    To do
-                  </h2>
-                  {data.todos.length === 0 ? (
-                    <div className="card p-4 text-hint">You&apos;re all caught up.</div>
-                  ) : (
-                    <ul className="card divide-y divide-line overflow-hidden">
-                      {data.todos.map((t) => (
-                        <li key={t.key}>
-                          <Link href={t.href} className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-primary-tint/60">
-                            <span className="flex min-w-0 items-center gap-2.5">
-                              <span aria-hidden className={`size-2 shrink-0 rounded-full ${t.tone === "warning" ? "bg-secondary" : "bg-primary"}`} />
-                              <span className="truncate">{t.label}</span>
-                            </span>
-                            <ArrowIcon className="text-hint" />
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </section>
+            {/* One grid, so the boxes in each row start at the same line; each is only as tall as its content. */}
+            <div className="grid items-start gap-4 sm:gap-6 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+                <Panel title="To do" tone="primary" count={data.todos.length} empty="You're all caught up.">
+                  {data.todos.map((t) => (
+                    <RowLink key={t.key} href={t.href}>
+                      <span className="flex min-w-0 items-center gap-2.5">
+                        <span aria-hidden className={`size-2 shrink-0 rounded-full ${t.tone === "warning" ? "bg-secondary" : "bg-primary"}`} />
+                        <span className="truncate">{t.label}</span>
+                      </span>
+                    </RowLink>
+                  ))}
+                </Panel>
 
-                <section aria-labelledby="teams-heading">
-                  <h2 id="teams-heading" className="section-label mb-3">
-                    My teams
-                  </h2>
-                  <ul className="grid gap-3 sm:grid-cols-2">
-                    {data.teams.map((t) => (
-                      <li key={t.teamId}>
-                        <Link href={`/teams/${t.teamId}`} className="card block h-full p-4">
-                          <div className="flex items-start justify-between gap-2">
-                            <p className="font-semibold">{t.teamName}</p>
-                            {t.status === "finished" ? <Chip tone="pending">Finished</Chip> : <Chip tone="confirmed">Active</Chip>}
-                          </div>
-                          <p className="mt-0.5 truncate text-small text-hint">{t.context}</p>
-                          <p className="mt-2 text-small">{t.role ? `Your role: ${t.role}` : "No role set yet"}</p>
-                          <p className="mt-1 text-small text-hint">
-                            {[
-                              t.toConfirm > 0 && `${t.toConfirm} to confirm`,
-                              t.ratingsDue > 0 && `${t.ratingsDue} ${t.ratingsDue === 1 ? "rating" : "ratings"} due`,
-                              `${formatHours(t.confirmedHours) || "0 h"} confirmed`,
-                            ]
-                              .filter(Boolean)
-                              .join(" · ")}
-                          </p>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              </div>
+                <Panel title="My teams" tone="confirmed">
+                  {data.teams.map((t) => (
+                    <RowLink key={t.teamId} href={`/teams/${t.teamId}`}>
+                      <span className="min-w-0">
+                        <span className="flex items-center gap-2">
+                          <span className="truncate font-semibold">{t.teamName}</span>
+                          {t.status === "finished" ? <Chip tone="pending">Finished</Chip> : <Chip tone="confirmed">Active</Chip>}
+                        </span>
+                        <span className="block truncate text-small text-hint">
+                          {[t.role ?? "No role yet", `${formatHours(t.confirmedHours) || "0 h"} confirmed`, t.toConfirm > 0 && `${t.toConfirm} to confirm`].filter(Boolean).join(" · ")}
+                        </span>
+                      </span>
+                    </RowLink>
+                  ))}
+                </Panel>
 
-              <section aria-labelledby="recent-heading">
-                <h2 id="recent-heading" className="section-label mb-3">
-                  Your recent work
-                </h2>
-                {data.recent.length === 0 ? (
-                  <EmptyState title="Nothing logged yet">Open your team and log the first thing you finished.</EmptyState>
-                ) : (
-                  <ul className="card divide-y divide-line overflow-hidden">
-                    {data.recent.map((c) => (
-                      <li key={c.id} className="px-4 py-3">
-                        <div className="flex items-start justify-between gap-2">
-                          <p className="min-w-0">{c.description}</p>
-                          {statusChip[c.status]}
-                        </div>
-                        <p className="mt-0.5 text-small text-hint">
+                <Panel title="Coming up" tone="secondary" count={data.deadlines.length} empty="Nothing due in the next two weeks.">
+                  {data.deadlines.map((d) => (
+                    <RowLink key={d.key} href={d.href}>
+                      <span className="min-w-0">
+                        <span className="block truncate">{d.title}</span>
+                        <span className="block truncate text-small text-hint">
+                          {d.kind}
+                          {data.multiTeam && ` · ${d.teamName}`} · {formatDate(d.due)}
+                        </span>
+                      </span>
+                      <Chip tone={d.overdue ? "disputed" : "warning"}>{d.when}</Chip>
+                    </RowLink>
+                  ))}
+                </Panel>
+
+                <Panel title="Your recent work" empty="Nothing logged yet. Open your team and log the first thing you finished.">
+                  {data.recent.map((c) => (
+                    <li key={c.id} className="flex items-start justify-between gap-3 px-4 py-3.5 sm:px-5">
+                      <span className="min-w-0">
+                        <span className="block">{c.description}</span>
+                        <span className="block text-small text-hint">
                           {data.multiTeam && `${c.teamName} · `}
                           {formatDate(c.completionDate)}
                           {c.hours !== null && ` · ${formatHours(c.hours)}`}
-                        </p>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
+                        </span>
+                      </span>
+                      {statusChip[c.status]}
+                    </li>
+                  ))}
+                </Panel>
             </div>
           </>
         )}
       </Page>
     </>
-  );
-}
-
-const iconProps = { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round", className: "size-5", "aria-hidden": true } as const;
-function CheckIcon() {
-  return (
-    <svg {...iconProps}>
-      <circle cx="12" cy="12" r="9" />
-      <path d="m8 12.5 2.5 2.5L16 9.5" />
-    </svg>
-  );
-}
-function StarIcon() {
-  return (
-    <svg {...iconProps}>
-      <path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" />
-    </svg>
-  );
-}
-function ClockIcon() {
-  return (
-    <svg {...iconProps}>
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 7.5V12l3 2" />
-    </svg>
-  );
-}
-function FlagIcon() {
-  return (
-    <svg {...iconProps}>
-      <path d="M5 21V4M5 4h11l-2 4 2 4H5" />
-    </svg>
   );
 }

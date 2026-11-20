@@ -5,7 +5,7 @@ import { authorize, can } from "../permissions";
 import { charters, contributions, disputes, flags, memberships, projects, tasks, teams } from "../data/repo";
 import { allAgreed, charterStatus, inactiveMembers, isCharterComplete } from "../rules";
 import type { SessionUser } from "../types";
-import { authorizeTeam, fullName, NotFoundError, UserError } from "./common";
+import { authorizeTeam, fullName, NotFoundError, shortName, UserError } from "./common";
 
 // ── Team charter (P14) ───────────────────────────────────────────────────────
 
@@ -116,6 +116,8 @@ export interface TeamSignal {
   openDisputes: number;
   openFlags: number;
   inactive: { userId: number; name: string; lastLoggedDate: string | null }[];
+  /** Confirmed hours per student member, most first: who is carrying the work. */
+  memberHours: { userId: number; name: string; hours: number }[];
   needsAttention: boolean;
   headline: string;
   reasons: string[];
@@ -129,12 +131,18 @@ export async function teamSignals(user: SessionUser | null, projectId: number, a
   const teamRows = await teams.byProject(projectId);
   return Promise.all(
     teamRows.map(async (t) => {
-      const [members, last, d, f] = await Promise.all([
+      const [members, last, d, f, hours] = await Promise.all([
         memberships.byTeam(t.team_id),
         contributions.lastLoggedByMember(t.team_id),
         disputes.openCountByTeam(t.team_id),
         flags.openCountByTeam(t.team_id),
+        contributions.hoursByMember(t.team_id),
       ]);
+      const hoursById = new Map(hours.map((h) => [h.user_id, h.confirmed_hours]));
+      const memberHours = members
+        .filter((m) => m.access_level === "write")
+        .map((m) => ({ userId: m.user_id, name: shortName(m), hours: hoursById.get(m.user_id) ?? 0 }))
+        .sort((a, b) => b.hours - a.hours);
       const lastById = new Map(last.map((l) => [l.user_id, l.last_logged]));
       // Only nag about inactivity while the channel is live and the member has been on the team for the whole window.
       const live = t.channel_status === "published";
@@ -162,6 +170,7 @@ export async function teamSignals(user: SessionUser | null, projectId: number, a
         openDisputes,
         openFlags,
         inactive,
+        memberHours,
         needsAttention,
         headline: needsAttention ? `${t.team_name} in Section ${project.section_number} may need attention` : `${t.team_name} is on track`,
         reasons,

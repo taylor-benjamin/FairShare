@@ -4,7 +4,8 @@ import type { NextStep } from "@/lib/rules";
 import { ActionForm, SubmitButton } from "./forms";
 import { LinkButton } from "./ui";
 
-export function NextStepCard({ step, projectId }: { step: NonNullable<NextStep>; projectId: number }) {
+/** The one button that does the next setup step (upload, publish, add or complete a milestone, send links). */
+export function NextStepAction({ step, projectId }: { step: NonNullable<NextStep>; projectId: number }) {
   const project = `/instructor/projects/${projectId}`;
   const action =
     step.kind === "upload" ? (
@@ -31,6 +32,11 @@ export function NextStepCard({ step, projectId }: { step: NonNullable<NextStep>;
       </LinkButton>
     );
 
+  return action;
+}
+
+export function NextStepCard({ step, projectId }: { step: NonNullable<NextStep>; projectId: number }) {
+  const action = <NextStepAction step={step} projectId={projectId} />;
   return (
     <div className="flex flex-col gap-3 rounded-(--radius-card) border border-secondary/30 bg-secondary-tint p-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-start gap-2.5">

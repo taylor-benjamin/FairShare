@@ -24,19 +24,21 @@ export interface CardData {
 
 const edge = { pending: "border-l-primary", confirmed: "border-l-confirmed", disputed: "border-l-disputed" };
 
-export function ContributionCard({ c, footer }: { c: CardData; footer?: ReactNode }) {
-  let chip: ReactNode;
-  if (c.verification_status === "confirmed") chip = <Chip tone="confirmed">Confirmed</Chip>;
-  else if (c.verification_status === "disputed") chip = <Chip tone="disputed">{c.dispute_status === "upheld" ? "Dispute upheld" : "Disputed"}</Chip>;
-  else if (c.canVerify) chip = <Chip tone="review">Needs your review</Chip>;
-  else
-    chip = (
-      <Chip tone="pending">
-        {c.isMine ? "Waiting" : c.myDecision ? "You confirmed" : "Pending"}
-        {c.confirmsNeeded ? ` · ${c.confirm_count ?? 0}/${c.confirmsNeeded}` : ""}
-      </Chip>
-    );
+/** The status chip for an entry: confirmed, disputed, needs your review, or waiting with the confirm count. */
+export function contributionChip(c: CardData): ReactNode {
+  if (c.verification_status === "confirmed") return <Chip tone="confirmed">Confirmed</Chip>;
+  if (c.verification_status === "disputed") return <Chip tone="disputed">{c.dispute_status === "upheld" ? "Dispute upheld" : "Disputed"}</Chip>;
+  if (c.canVerify) return <Chip tone="review">Needs your review</Chip>;
+  return (
+    <Chip tone="pending">
+      {c.isMine ? "Waiting" : c.myDecision ? "You confirmed" : "Pending"}
+      {c.confirmsNeeded ? ` · ${c.confirm_count ?? 0}/${c.confirmsNeeded}` : ""}
+    </Chip>
+  );
+}
 
+export function ContributionCard({ c, footer }: { c: CardData; footer?: ReactNode }) {
+  const chip = contributionChip(c);
   return (
     <article className={`card border-l-4 p-4 shadow-[0_1px_2px_rgba(31,41,51,0.04)] ${edge[c.verification_status]}`} aria-label={`${c.authorShort}: ${c.description}`}>
       <div className="flex items-start justify-between gap-2">

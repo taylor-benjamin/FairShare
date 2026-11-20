@@ -4,18 +4,24 @@ import { MobileMenu } from "./mobile-menu";
 import { NavLinks } from "./nav-links";
 import { NewMenu } from "./new-menu";
 import { NotificationBell } from "./notification-bell";
-import { logoutAction } from "@/app/actions/auth";
+import { TeamsMenu, type NavTeam } from "./teams-menu";
+import { UserMenu } from "./user-menu";
 import { projectsAwaitingClassList } from "@/lib/services/class-setup";
 import { getNotifications } from "@/lib/services/notifications";
+import { myTeams } from "@/lib/services/team-health";
 import type { AppNotification, SessionUser } from "@/lib/types";
 
-const linksFor = (role: SessionUser["role"]) =>
+/**
+ * Top-bar links. Students get Dashboard plus a "My teams" dropdown (TeamsMenu) listing every team,
+ * even when there's only one, so the label never changes. The phone menu lists every team.
+ */
+const linksFor = (role: SessionUser["role"], teams: NavTeam[]) =>
   role === "instructor"
     ? [
         { href: "/instructor", label: "Dashboard" },
         { href: "/instructor/reviews", label: "Reviews" },
       ]
-    : [{ href: "/teams", label: "Dashboard" }];
+    : [{ href: "/teams", label: "Dashboard", exact: true }, ...teams.map((t) => ({ href: `/teams/${t.teamId}`, label: t.name }))];
 
 /** Thin top navigation shared by every signed-in page. */
 export async function AppNav({ user }: { user: SessionUser }) {
@@ -30,6 +36,14 @@ export async function AppNav({ user }: { user: SessionUser }) {
       awaitingClassList = await projectsAwaitingClassList(user);
     } catch {}
   }
+  let teams: NavTeam[] = [];
+  if (user.role === "student") {
+    try {
+      teams = (await myTeams(user)).map((t) => ({ teamId: t.team_id, name: t.team_name, context: `${t.project_name} · ${t.course_code} Section ${t.section_number}` }));
+    } catch {}
+  }
+  const links = linksFor(user.role, teams);
+  const hasTeams = teams.length > 0;
   return (
     <nav className="sticky top-0 z-20 border-b border-line/70 bg-surface/85 backdrop-blur-md">
       <div className="flex w-full items-center gap-x-2 gap-y-1 px-4 py-2.5 sm:gap-x-4 sm:px-6 lg:px-8">
@@ -39,28 +53,15 @@ export async function AppNav({ user }: { user: SessionUser }) {
             Fair<span className="text-secondary">Share</span>
           </span>
         </Link>
-        <div className="hidden sm:block">
-          <NavLinks links={linksFor(user.role)} />
+        <div className="hidden items-center gap-1 sm:flex">
+          <NavLinks links={hasTeams ? links.slice(0, 1) : links} />
+          {hasTeams && <TeamsMenu teams={teams} />}
         </div>
         <div className="ml-auto flex shrink-0 items-center gap-1.5 text-small sm:gap-3">
           {user.role === "instructor" && <NewMenu awaitingClassList={awaitingClassList} />}
           <NotificationBell items={notifications} />
-          <span className="hidden items-center gap-2 sm:inline-flex">
-            <span aria-hidden className="grid size-8 place-items-center rounded-full bg-primary text-[12px] font-semibold text-white ring-2 ring-secondary/60 ring-offset-2">
-              {user.firstName[0]}
-              {user.lastName[0]}
-            </span>
-            <span className="leading-tight">
-              <span className="block text-ink">
-                {user.firstName} {user.lastName}
-              </span>
-              <span className="block text-[12px] text-hint capitalize">{user.role}</span>
-            </span>
-          </span>
-          <form action={logoutAction} className="hidden sm:block">
-            <button className="rounded-full px-2 py-1.5 whitespace-nowrap text-primary transition hover:bg-primary-tint sm:px-3">Log out</button>
-          </form>
-          <MobileMenu links={linksFor(user.role)} name={`${user.firstName} ${user.lastName}`} role={user.role} />
+          <UserMenu firstName={user.firstName} lastName={user.lastName} role={user.role} />
+          <MobileMenu links={links} name={`${user.firstName} ${user.lastName}`} role={user.role} />
         </div>
       </div>
     </nav>

@@ -1,8 +1,8 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { resolveDisputeAction, reviewFlagAction } from "@/app/actions/instructor";
-import { ContributionCard } from "@/components/contribution-card";
 import { ActionForm, SubmitButton } from "@/components/forms";
-import { Chip, EmptyState, Field, formatDate, HeaderBar, Page } from "@/components/ui";
+import { Chip, Field, formatDate, formatHours, HeaderBar, Page, Panel } from "@/components/ui";
 import { requireUser } from "@/lib/auth/session";
 import { disputeQueue } from "@/lib/services/contribution-service";
 import { flagQueue } from "@/lib/services/peer-evaluation";
@@ -19,78 +19,58 @@ export default async function ReviewsPage() {
     <>
       <HeaderBar title="Needs your review" subtitle="Disputed work and unusual rating patterns, oldest first" crumbs={[{ href: "/instructor", label: "Dashboard" }]} />
       <Page>
-        <div className="grid gap-10 lg:grid-cols-2">
-          <section>
-            <h2 className="text-heading">Disputed entries</h2>
-            <p className="mt-1 text-small text-hint">A teammate says this work log entry isn&apos;t accurate. Uphold the dispute to remove the credit, or reject it to confirm the entry.</p>
-            <div className="mt-4 space-y-4">
-              {disputes.open.length === 0 && <EmptyState title="No open disputes" />}
+        <div className="grid items-start gap-4 sm:gap-6 lg:grid-cols-2">
+          <div className="space-y-3">
+            <Panel title="Disputed entries" tone="disputed" count={disputes.open.length} empty="No open disputes.">
               {disputes.open.map((d) => (
-                <div key={d.dispute_id}>
-                  <p className="mb-1 text-small text-hint">
+                <li key={d.dispute_id} className="px-4 py-4 sm:px-5">
+                  <p className="text-small text-hint">
                     <Link href={`/instructor/teams/${d.team_id}`} className="link">
                       {d.team_name}
                     </Link>{" "}
                     · Section {d.section_number} · disputed by {d.disputer_name} on {formatDate(d.opened_date)}
                   </p>
-                  <ContributionCard
-                    c={{
-                      contribution_id: d.contribution_id,
-                      team_id: d.team_id,
-                      authorShort: d.author_name,
-                      description: d.description,
-                      hours_spent: d.hours_spent,
-                      completion_date: d.completion_date,
-                      verification_status: "disputed",
-                      task_title: null,
-                      dispute_reason: d.reason,
-                      dispute_status: "open",
-                    }}
-                    footer={
-                      <ActionForm action={resolveDisputeAction.bind(null, d.dispute_id)} className="mt-3 space-y-2 border-t border-line pt-3">
-                        <Field label="Your note to the team" htmlFor={`note-${d.dispute_id}`}>
-                          <input id={`note-${d.dispute_id}`} name="note" maxLength={255} placeholder="Required. The team sees this" className="field-input" />
-                        </Field>
-                        <div className="flex flex-wrap gap-2">
-                          <SubmitButton variant="dispute" small name="resolution" value="upheld" pendingText="Saving…">
-                            Uphold dispute
-                          </SubmitButton>
-                          <SubmitButton variant="confirm" small name="resolution" value="rejected" pendingText="Saving…">
-                            Reject dispute
-                          </SubmitButton>
-                        </div>
-                      </ActionForm>
-                    }
-                  />
-                </div>
+                  <p className="mt-1.5 text-ink">{d.description}</p>
+                  <p className="text-small text-hint">
+                    {d.author_name} · {formatDate(d.completion_date)}
+                    {d.hours_spent !== null && ` · ${formatHours(d.hours_spent)}`}
+                  </p>
+                  {d.reason && <p className="mt-1 text-small text-disputed">Reason: {d.reason}</p>}
+                  <ActionForm action={resolveDisputeAction.bind(null, d.dispute_id)} className="mt-3 space-y-2">
+                    <Field label="Your note to the team" htmlFor={`note-${d.dispute_id}`}>
+                      <input id={`note-${d.dispute_id}`} name="note" maxLength={255} placeholder="Required. The team sees this" className="field-input" />
+                    </Field>
+                    <div className="flex flex-wrap gap-2">
+                      <SubmitButton variant="dispute" small name="resolution" value="upheld" pendingText="Saving…">
+                        Uphold dispute
+                      </SubmitButton>
+                      <SubmitButton variant="confirm" small name="resolution" value="rejected" pendingText="Saving…">
+                        Reject dispute
+                      </SubmitButton>
+                    </div>
+                  </ActionForm>
+                </li>
               ))}
-            </div>
+            </Panel>
+            <p className="px-1 text-small text-hint">Uphold a dispute to remove the credit, or reject it to confirm the entry.</p>
             {disputes.resolved.length > 0 && (
-              <details className="mt-6">
-                <summary className="cursor-pointer text-small text-hint">Recently resolved ({disputes.resolved.length})</summary>
-                <ul className="mt-2 space-y-2 text-small">
-                  {disputes.resolved.map((d) => (
-                    <li key={d.dispute_id} className="rounded-xl bg-wash p-3.5">
-                      <span className="font-semibold">{d.team_name}</span> · {d.author_name}: “{d.description}” ·{" "}
-                      <span className={d.dispute_status === "upheld" ? "text-disputed" : "text-confirmed"}>{d.dispute_status}</span>
-                      {d.resolution_note && <span className="block text-hint">{d.resolution_note}</span>}
-                    </li>
-                  ))}
-                </ul>
-              </details>
+              <History title="Recently resolved" count={disputes.resolved.length}>
+                {disputes.resolved.map((d) => (
+                  <li key={d.dispute_id} className="px-4 py-3 text-small sm:px-5">
+                    <span className="font-semibold">{d.team_name}</span> · {d.author_name}: “{d.description}” ·{" "}
+                    <span className={d.dispute_status === "upheld" ? "text-disputed" : "text-confirmed"}>{d.dispute_status}</span>
+                    {d.resolution_note && <span className="block text-hint">{d.resolution_note}</span>}
+                  </li>
+                ))}
+              </History>
             )}
-          </section>
+          </div>
 
-          <section>
-            <h2 className="text-heading">Unusual rating patterns</h2>
-            <p className="mt-1 text-small text-hint">
-              FairShare checks every set of ratings for two patterns. A flag isn&apos;t proof. Dismiss any that look fine.
-            </p>
-            <div className="mt-4 space-y-3">
-              {flags.open.length === 0 && <EmptyState title="No open flags" />}
+          <div className="space-y-3">
+            <Panel title="Unusual rating patterns" tone="primary" count={flags.open.length} empty="No open flags.">
               {flags.open.map((f) => (
-                <div key={f.flag_id} className="card border-l-4 border-l-primary p-4">
-                  <div className="flex items-start justify-between gap-2">
+                <li key={f.flag_id} className="px-4 py-4 sm:px-5">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
                     <p className="text-small text-hint">
                       <Link href={`/instructor/teams/${f.team_id}`} className="link">
                         {f.team_name}
@@ -99,7 +79,7 @@ export default async function ReviewsPage() {
                     </p>
                     <Chip tone="review">{flagLabel[f.flag_type]}</Chip>
                   </div>
-                  <p className="mt-1">{f.flag_details}</p>
+                  <p className="mt-1.5 text-ink">{f.flag_details}</p>
                   <ActionForm action={reviewFlagAction.bind(null, f.flag_id)} className="mt-3 flex flex-wrap gap-2">
                     <SubmitButton variant="secondary" small name="status" value="dismissed" pendingText="Saving…">
                       Dismiss
@@ -108,24 +88,38 @@ export default async function ReviewsPage() {
                       Confirm
                     </SubmitButton>
                   </ActionForm>
-                </div>
+                </li>
               ))}
-            </div>
+            </Panel>
+            <p className="px-1 text-small text-hint">FairShare checks every set of ratings for two patterns. A flag isn&apos;t proof. Dismiss any that look fine.</p>
             {flags.reviewed.length > 0 && (
-              <details className="mt-6">
-                <summary className="cursor-pointer text-small text-hint">Recently reviewed ({flags.reviewed.length})</summary>
-                <ul className="mt-2 space-y-2 text-small">
-                  {flags.reviewed.map((f) => (
-                    <li key={f.flag_id} className="rounded-xl bg-wash p-3.5">
-                      {f.team_name}: {f.flag_details} · {f.review_status}
-                    </li>
-                  ))}
-                </ul>
-              </details>
+              <History title="Recently reviewed" count={flags.reviewed.length}>
+                {flags.reviewed.map((f) => (
+                  <li key={f.flag_id} className="px-4 py-3 text-small sm:px-5">
+                    <span className="font-semibold">{f.team_name}</span>: {f.flag_details} · {f.review_status}
+                  </li>
+                ))}
+              </History>
             )}
-          </section>
+          </div>
         </div>
       </Page>
     </>
+  );
+}
+
+/** A folded card with past items, opened on demand. */
+function History({ title, count, children }: { title: string; count: number; children: ReactNode }) {
+  return (
+    <details className="card overflow-hidden">
+      <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 sm:px-5 [&::-webkit-details-marker]:hidden">
+        <span className="flex items-center gap-2 font-semibold">
+          {title}
+          <span className="rounded-full bg-wash px-2 py-0.5 text-small font-normal text-hint">{count}</span>
+        </span>
+        <span className="text-small text-primary">Show</span>
+      </summary>
+      <ul className="divide-y divide-line border-t border-line">{children}</ul>
+    </details>
   );
 }

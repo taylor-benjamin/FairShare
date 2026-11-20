@@ -71,31 +71,33 @@ export function Chip({ tone = "neutral", children }: { tone?: ChipTone; children
 }
 
 type StatTone = "primary" | "secondary" | "confirmed" | "disputed";
-const statTones: Record<StatTone, string> = {
-  primary: "bg-primary-soft text-primary",
-  secondary: "bg-secondary-soft text-secondary-ink",
-  confirmed: "bg-confirmed-soft text-confirmed",
-  disputed: "bg-disputed-soft text-disputed",
+const statTones: Record<StatTone, { card: string; dot: string; label: string }> = {
+  primary: { card: "border-primary/15 bg-primary-tint", dot: "bg-primary", label: "text-primary-dark" },
+  secondary: { card: "border-secondary/20 bg-secondary-tint", dot: "bg-secondary", label: "text-secondary-ink" },
+  confirmed: { card: "border-confirmed/15 bg-confirmed-soft/45", dot: "bg-confirmed", label: "text-confirmed" },
+  disputed: { card: "border-disputed/15 bg-disputed-soft/45", dot: "bg-disputed", label: "text-disputed" },
 };
 
-/** KPI tile: tinted icon square, label, big number, small caption. */
-export function StatTile({ label, value, caption, tone = "primary", icon, href }: { label: string; value: ReactNode; caption?: string; tone?: StatTone; icon?: ReactNode; href?: string }) {
+/** KPI tile tinted in its tone: colored label with a dot, big number, short caption. Tiles in a row share one height. */
+export function StatTile({ label, value, caption, tone = "primary", href }: { label: string; value: ReactNode; caption?: string; tone?: StatTone; href?: string }) {
+  const t = statTones[tone];
+  const cls = `block h-full rounded-(--radius-card) border p-4 sm:p-5 ${t.card}`;
   const body = (
-    <div className="flex items-start gap-3">
-      <span className={`icon-tile ${statTones[tone]}`}>{icon ?? <span className="size-2.5 rounded-full bg-current" />}</span>
-      <div className="min-w-0">
-        <p className="text-small text-hint">{label}</p>
-        <p className="text-display tabular-nums">{value}</p>
-        {caption && <p className="mt-0.5 hidden text-small text-hint sm:block">{caption}</p>}
-      </div>
-    </div>
+    <>
+      <p className={`flex items-start gap-2 text-small font-semibold ${t.label}`}>
+        <span aria-hidden className={`mt-1.5 size-2 shrink-0 rounded-full ${t.dot}`} />
+        <span>{label}</span>
+      </p>
+      <p className="mt-2 text-[28px] leading-none font-semibold tracking-tight text-ink tabular-nums sm:text-[32px]">{value}</p>
+      {caption && <p className="mt-2 text-small text-hint">{caption}</p>}
+    </>
   );
   return href ? (
-    <Link href={href} className="card block p-4 sm:p-5">
+    <Link href={href} className={`${cls} transition hover:shadow-(--shadow-soft)`}>
       {body}
     </Link>
   ) : (
-    <div className="card p-4 sm:p-5">{body}</div>
+    <div className={cls}>{body}</div>
   );
 }
 
@@ -161,8 +163,8 @@ export function HeaderBar({
                 </span>
               </Link>
             )}
-            <h1 className="truncate text-heading">{title}</h1>
-            {subtitle && <p className="mt-0.5 truncate text-small text-white/80">{subtitle}</p>}
+            <h1 className="text-heading sm:truncate">{title}</h1>
+            {subtitle && <p className="mt-0.5 text-small text-white/80 sm:truncate">{subtitle}</p>}
             <span aria-hidden className="mt-3 block h-1 w-12 rounded-full bg-secondary" />
           </div>
           {right}
@@ -187,6 +189,65 @@ export function ArrowIcon({ direction = "right", className = "" }: { direction?:
     >
       <path d="M5 12h14M13 6l6 6-6 6" />
     </svg>
+  );
+}
+
+/**
+ * A titled card holding a divided list (<li> rows). Shows `empty` when there are no rows.
+ * `action` sits at the right of the title row, e.g. a filter dropdown.
+ */
+const panelTones = {
+  plain: { head: "", dot: "", count: "bg-wash text-hint" },
+  primary: { head: "bg-primary-tint", dot: "bg-primary", count: "bg-primary-soft text-primary-dark" },
+  secondary: { head: "bg-secondary-tint", dot: "bg-secondary", count: "bg-secondary-soft text-secondary-ink" },
+  confirmed: { head: "bg-confirmed-soft/45", dot: "bg-confirmed", count: "bg-confirmed-soft text-confirmed" },
+  disputed: { head: "bg-disputed-soft/45", dot: "bg-disputed", count: "bg-disputed-soft text-disputed" },
+} as const;
+
+export function Panel({
+  title,
+  count,
+  empty,
+  action,
+  tone = "plain",
+  menus = false,
+  children,
+}: {
+  title: string;
+  count?: number;
+  empty?: ReactNode;
+  action?: ReactNode;
+  /** Tints the title row in a theme color. */
+  tone?: keyof typeof panelTones;
+  /** Let dropdowns inside the rows (e.g. a MoreMenu) open past the card's edge. */
+  menus?: boolean;
+  children: ReactNode[];
+}) {
+  const t = panelTones[tone];
+  return (
+    <section className={`card flex flex-col ${menus ? "" : "overflow-hidden"}`}>
+      <div className={`card-head rounded-t-(--radius-card) ${t.head}`}>
+        <h2 className="flex items-center gap-2">
+          {t.dot && <span aria-hidden className={`size-2 rounded-full ${t.dot}`} />}
+          {title}
+          {count !== undefined && count > 0 && <span className={`rounded-full px-2 py-0.5 text-small font-normal ${t.count}`}>{count}</span>}
+        </h2>
+        {action}
+      </div>
+      {children.length === 0 ? <div className="flex-1 px-4 py-6 text-center text-hint sm:px-5">{empty}</div> : <ul className="flex-1 divide-y divide-line">{children}</ul>}
+    </section>
+  );
+}
+
+/** A Panel row that links somewhere, with a trailing arrow. */
+export function RowLink({ href, children }: { href: string; children: ReactNode }) {
+  return (
+    <li>
+      <Link href={href} className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-primary-tint/60 sm:px-5">
+        <span className="flex min-w-0 flex-1 items-center justify-between gap-3">{children}</span>
+        <ArrowIcon className="shrink-0 text-hint" />
+      </Link>
+    </li>
   );
 }
 
@@ -235,7 +296,7 @@ export function formatHours(h: number | null | undefined): string {
 export function PageTabs({ base, active, items }: { base: string; active: string; items: { key: string; label: string; count?: number }[] }) {
   return (
     <nav aria-label="Sections" className="mb-6">
-      <div className="pill-track">
+      <div className="pill-track !flex-nowrap overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {items.map((t, i) => {
           const on = t.key === active;
           const href = i === 0 ? base : `${base}?tab=${t.key}`;

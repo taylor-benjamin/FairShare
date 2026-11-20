@@ -9,10 +9,10 @@ import { logoutAction } from "@/app/actions/auth";
  * Phone navigation: a ☰ button in the sticky top bar that opens a full-width menu panel.
  * Hidden from the sm breakpoint up, where the regular top-bar links show instead.
  */
-export function MobileMenu({ links, name, role }: { links: { href: string; label: string }[]; name: string; role: string }) {
+export function MobileMenu({ links, name, role }: { links: { href: string; label: string; exact?: boolean }[]; name: string; role: string }) {
   const [open, setOpen] = useState(false);
   const path = usePathname();
-  const active = links.filter((l) => path === l.href || path.startsWith(l.href + "/")).sort((a, b) => b.href.length - a.href.length)[0]?.href;
+  const active = links.filter((l) => path === l.href || (!l.exact && path.startsWith(l.href + "/"))).sort((a, b) => b.href.length - a.href.length)[0]?.href;
 
   // Close on navigation and on Escape; stop the page behind from scrolling while open.
   useEffect(() => setOpen(false), [path]);

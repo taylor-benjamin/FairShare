@@ -5,9 +5,12 @@ import { ConfirmAction } from "@/components/confirm-action";
 import { CopyLink } from "@/components/copy-link";
 import { DangerZone } from "@/components/danger-zone";
 import { handlePageError } from "@/components/access-denied";
-import { ContributionCard } from "@/components/contribution-card";
+import { ActivityRow } from "@/components/activity-row";
+import { HoursPanel, type HoursRow } from "@/components/hours-panel";
+import { MoreMenu } from "@/components/more-menu";
+import { UrlSelect } from "@/components/url-select";
 import { ActionForm, SubmitButton } from "@/components/forms";
-import { ArrowIcon, Chip, EmptyState, Field, formatDate, HeaderBar, Page, PageTabs } from "@/components/ui";
+import { ArrowIcon, Chip, EmptyState, Field, HeaderBar, Page, PageTabs, Panel } from "@/components/ui";
 import { requireUser } from "@/lib/auth/session";
 import { getTeamRoster } from "@/lib/services/class-setup";
 import { getChannel } from "@/lib/services/contribution-service";
@@ -18,12 +21,19 @@ import { TaskHistoryList } from "@/components/task-history";
 export const metadata = { title: "Team" };
 
 const TABS = ["overview", "members", "ratings", "tasks", "settings"] as const;
+const feedFilters = [
+  { value: "all", label: "All entries" },
+  { value: "pending", label: "Waiting" },
+  { value: "confirmed", label: "Confirmed" },
+  { value: "disputed", label: "Disputed" },
+];
 type Tab = (typeof TABS)[number];
 
-export default async function InstructorTeamPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string }> }) {
+export default async function InstructorTeamPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string; show?: string }> }) {
   const user = await requireUser(["instructor"]);
   const teamId = Number((await params).id);
-  const tabParam = (await searchParams).tab;
+  const sp = await searchParams;
+  const tabParam = sp.tab;
   const tab: Tab = TABS.includes(tabParam as Tab) ? (tabParam as Tab) : "overview";
   let channel, results, history, signal, roster;
   try {
@@ -36,8 +46,17 @@ export default async function InstructorTeamPage({ params, searchParams }: { par
   const assignedTasks = tasks.filter((t) => t.user_id !== null);
   const base = await appUrl();
   const href = `/instructor/teams/${teamId}`;
-  const confirmed = feed.filter((c) => c.verification_status === "confirmed").length;
-  const disputed = feed.filter((c) => c.verification_status === "disputed").length;
+
+  const showRaw = sp.show ?? "all";
+  const show = feedFilters.some((f) => f.value === showRaw) ? showRaw : "all";
+  const shown = feed.filter((c) => (show === "all" ? true : c.verification_status === show));
+  const hours: HoursRow[] = members
+    .filter((m) => m.access_level === "write")
+    .map((m) => {
+      const mine = feed.filter((c) => c.user_id === m.user_id && c.verification_status === "confirmed");
+      return { id: m.user_id, name: `${m.first_name} ${m.last_name}`, hours: mine.reduce((s, c) => s + (c.hours_spent ?? 0), 0), entries: mine.length };
+    });
+  const status = team.channel_status === "published" ? "Active" : team.channel_status === "finished" ? "Finished" : "Draft";
 
   return (
     <>
@@ -48,17 +67,22 @@ export default async function InstructorTeamPage({ params, searchParams }: { par
           { href: "/instructor", label: "Dashboard" },
           { href: `/instructor/projects/${team.project_id}`, label: team.project_name },
         ]}
+        right={
+          <Link
+            href={`/teams/${teamId}`}
+            className="flex shrink-0 flex-col items-end gap-1 rounded-2xl bg-white/15 px-3.5 py-2 text-right text-white ring-1 ring-white/30 transition-colors hover:bg-white/25 sm:px-4"
+          >
+            <span className="inline-flex items-center gap-1 text-small font-semibold">
+              Student view <ArrowIcon />
+            </span>
+            <span className="inline-flex items-center gap-1.5 text-xs whitespace-nowrap opacity-90">
+              <span aria-hidden className={`size-1.5 rounded-full ${status === "Active" ? "bg-emerald-400" : "bg-white/60"}`} />
+              {status}
+            </span>
+          </Link>
+        }
       />
       <Page>
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          <Chip tone={team.channel_status === "published" ? "confirmed" : "pending"}>
-            {team.channel_status === "published" ? "Active" : team.channel_status === "finished" ? "Finished" : "Draft"}
-          </Chip>
-          <Link href={`/teams/${teamId}`} className="link inline-flex items-center gap-1 text-small">
-            View as a student <ArrowIcon />
-          </Link>
-        </div>
-
         <PageTabs
           base={href}
           active={tab}
@@ -72,114 +96,129 @@ export default async function InstructorTeamPage({ params, searchParams }: { par
         />
 
         {tab === "overview" && (
-          <>
-            {signal?.needsAttention ? (
-              <div className="mb-6 rounded-(--radius-card) border border-primary/20 bg-primary-tint p-4 sm:p-5">
-                <p className="font-semibold text-primary">Needs attention</p>
-                <ul className="mt-1 list-disc pl-5 text-small">
-                  {signal.reasons.map((r) => (
-                    <li key={r}>{r}</li>
-                  ))}
-                </ul>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {(signal.openDisputes > 0 || signal.openFlags > 0) && (
-                    <Link href="/instructor/reviews" className="link inline-flex items-center gap-1 text-small">
-                      Review disputes and flags <ArrowIcon />
-                    </Link>
-                  )}
-                  {signal.inactive.length > 0 && (
-                    <Link href={`${href}?tab=tasks`} className="link inline-flex items-center gap-1 text-small">
-                      Reassign a task <ArrowIcon />
-                    </Link>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="mb-6 rounded-(--radius-card) border border-confirmed/20 bg-confirmed-soft/50 p-4 text-small">This team is on track.</div>
-            )}
-            <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-              <h2 className="text-heading">Work log</h2>
-              <p className="text-small text-hint">
-                {feed.length} {feed.length === 1 ? "entry" : "entries"} · {confirmed} confirmed{disputed > 0 && ` · ${disputed} disputed`}
-              </p>
+          <div className="grid items-start gap-4 sm:gap-6 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+            <div className="space-y-4 sm:space-y-6">
+              {signal?.needsAttention ? (
+                <Panel title="Needs attention" tone="primary" count={signal.reasons.length}>
+                  {[
+                    ...signal.reasons.map((r) => (
+                      <li key={r} className="flex items-start gap-2.5 px-4 py-3 sm:px-5">
+                        <span aria-hidden className="mt-2 size-1.5 shrink-0 rounded-full bg-primary" />
+                        {r}
+                      </li>
+                    )),
+                    <li key="actions" className="flex flex-wrap gap-x-4 gap-y-1 px-4 py-3 sm:px-5">
+                      {(signal.openDisputes > 0 || signal.openFlags > 0) && (
+                        <Link href="/instructor/reviews" className="link inline-flex items-center gap-1 text-small">
+                          Review disputes and flags <ArrowIcon />
+                        </Link>
+                      )}
+                      {signal.inactive.length > 0 && (
+                        <Link href={`${href}?tab=tasks`} className="link inline-flex items-center gap-1 text-small">
+                          Reassign a task <ArrowIcon />
+                        </Link>
+                      )}
+                    </li>
+                  ]}
+                </Panel>
+              ) : (
+                <Panel title="On track" tone="confirmed">
+                  {[
+                    <li key="ok" className="px-4 py-3 text-small text-hint sm:px-5">
+                      No warnings: everyone is logging work and there are no open disputes or flags.
+                    </li>,
+                  ]}
+                </Panel>
+              )}
+              <HoursPanel rows={hours} />
             </div>
-            <div className="grid gap-3 md:grid-cols-2">
-              {feed.length === 0 ? <EmptyState title="Nothing logged yet" /> : feed.map((c) => <ContributionCard key={c.contribution_id} c={{ ...c, canVerify: false }} />)}
-            </div>
-          </>
+
+            <Panel
+              title="Work log"
+              count={feed.length}
+              action={<UrlSelect name="show" value={show} options={feedFilters} label="Show" />}
+              empty={feed.length === 0 ? "Nothing logged yet." : "Nothing matches this filter."}
+            >
+              {shown.map((c) => (
+                <ActivityRow key={c.contribution_id} c={{ ...c, canVerify: false }} />
+              ))}
+            </Panel>
+          </div>
         )}
 
         {tab === "members" && (
-          <section className="max-w-3xl">
-            <ul className="card divide-y divide-line overflow-hidden">
-              {roster.members.length === 0 && roster.pending.length === 0 && <li className="px-4 py-3 text-small text-hint">No students yet.</li>}
-              {roster.members.map((m) => (
-                <li key={m.user_id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5">
-                  <span className="min-w-0">
-                    <span className="block truncate">
-                      {m.first_name} {m.last_name}
-                      {m.team_role && <span className="text-small text-hint"> · {m.team_role}</span>}
+          <div className="grid items-start gap-4 sm:gap-6 md:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+            <Panel title="Members" tone="primary" menus count={roster.members.length + roster.pending.length} empty="No students yet.">
+              {[
+                ...roster.members.map((m) => (
+                  <li key={m.user_id} className="flex items-center justify-between gap-3 px-4 py-3 sm:px-5">
+                    <span className="min-w-0">
+                      <span className="block">
+                        {m.first_name} {m.last_name}
+                        {m.team_role && <span className="text-small text-hint"> · {m.team_role}</span>}
+                      </span>
+                      <span className="block truncate text-small text-hint">{m.email}</span>
                     </span>
-                    <span className="block truncate text-small text-hint">{m.email}</span>
-                  </span>
-                  <ConfirmAction
-                    action={removeMemberAction.bind(null, teamId, m.user_id)}
-                    label="Remove"
-                    pendingText="Removing…"
-                    confirm={`Remove ${m.first_name} ${m.last_name} from ${team.team_name}? Their logged work stays in the log.`}
-                  />
-                </li>
-              ))}
-              {roster.pending.map((i) => (
-                <li key={i.invitation_id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5">
-                  <span className="min-w-0">
-                    <span className="block truncate">{i.invited_email}</span>
-                    <span className="block text-small text-hint">Invited</span>
-                  </span>
-                  {team.channel_status !== "draft" && (
-                    <span className="flex flex-wrap items-center gap-1">
-                      <CopyLink url={`${base}/invite/${i.invite_token}`} />
-                      <ActionForm action={resendInviteAction.bind(null, i.invitation_id, team.project_id)} className="inline-flex items-center gap-2">
-                        <SubmitButton variant="ghost" small pendingText="Sending…" className="!border-0 !px-2.5 !py-1 !text-primary hover:!bg-primary-tint">
-                          Resend
-                        </SubmitButton>
-                      </ActionForm>
-                      <ConfirmAction action={cancelInviteAction.bind(null, i.invitation_id, teamId)} label="Cancel" pendingText="Cancelling…" confirm={`Cancel the invite for ${i.invited_email}? The link will stop working.`} />
+                    <MoreMenu label={`Actions for ${m.first_name} ${m.last_name}`}>
+                      <ConfirmAction
+                        menu
+                        action={removeMemberAction.bind(null, teamId, m.user_id)}
+                        label="Remove from team"
+                        confirm={`Remove ${m.first_name} ${m.last_name} from ${team.team_name}? Their logged work stays in the log.`}
+                      />
+                    </MoreMenu>
+                  </li>
+                )),
+                ...roster.pending.map((i) => (
+                  <li key={i.invitation_id} className="flex items-center justify-between gap-3 px-4 py-3 sm:px-5">
+                    <span className="min-w-0">
+                      <span className="block truncate">{i.invited_email}</span>
+                      <span className="block text-small text-secondary-ink">Invited, hasn&apos;t joined</span>
                     </span>
-                  )}
-                </li>
-              ))}
-            </ul>
-            <ActionForm action={addStudentAction.bind(null, teamId)} resetOnSuccess className="mt-4">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-                <div className="flex-1">
-                  <Field label="Add a student" htmlFor="add-email">
-                    <input id="add-email" name="email" type="email" maxLength={100} placeholder="student@school.edu" className="field-input" />
-                  </Field>
-                </div>
-                <SubmitButton pendingText="Adding…">
+                    {team.channel_status !== "draft" && (
+                      <span className="flex shrink-0 items-center gap-1">
+                        <CopyLink url={`${base}/invite/${i.invite_token}`} />
+                        <MoreMenu label={`Invite actions for ${i.invited_email}`}>
+                          <ActionForm action={resendInviteAction.bind(null, i.invitation_id, team.project_id)}>
+                            <button className="menu-item">Resend email</button>
+                          </ActionForm>
+                          <ConfirmAction menu action={cancelInviteAction.bind(null, i.invitation_id, teamId)} label="Cancel invite" confirm={`Cancel the invite for ${i.invited_email}? The link will stop working.`} />
+                        </MoreMenu>
+                      </span>
+                    )}
+                  </li>
+                )),
+              ]}
+            </Panel>
+            <section className="card">
+              <div className="card-head rounded-t-(--radius-card)">
+                <h2>Add a student</h2>
+              </div>
+              <ActionForm action={addStudentAction.bind(null, teamId)} resetOnSuccess className="space-y-3 p-4 sm:p-5">
+                <Field label="School email" htmlFor="add-email">
+                  <input id="add-email" name="email" type="email" maxLength={100} placeholder="student@school.edu" className="field-input" />
+                </Field>
+                <SubmitButton full pendingText="Adding…">
                   Add student
                 </SubmitButton>
-              </div>
-            </ActionForm>
-          </section>
+              </ActionForm>
+            </section>
+          </div>
         )}
 
         {tab === "ratings" && (
-          <section className="max-w-3xl">
-            <p className="text-small text-hint">Only you can see who gave which rating.</p>
+          <>
+            <p className="mb-3 text-small text-hint">Only you can see who gave which rating. Open a student to see the ratings they gave.</p>
             {results.matrix.length === 0 ? (
-              <div className="mt-3">
-                <EmptyState title="No completed milestones yet">
-                  Ratings open when you{" "}
-                  <Link href={`/instructor/projects/${team.project_id}?tab=milestones`} className="link">
-                    mark a milestone complete
-                  </Link>
-                  .
-                </EmptyState>
-              </div>
+              <EmptyState title="No completed milestones yet">
+                Ratings open when you{" "}
+                <Link href={`/instructor/projects/${team.project_id}?tab=milestones`} className="link">
+                  mark a milestone complete
+                </Link>
+                .
+              </EmptyState>
             ) : (
-              <ul className="mt-3 space-y-2">
+              <ul className="grid items-start gap-3 md:grid-cols-2">
                 {members.map((m) => {
                   const given = results.matrix.map(({ milestone, ratings }) => ({ milestone, ratings: ratings.filter((r) => r.fromId === m.user_id) }));
                   const done = given.filter((g) => g.ratings.length > 0).length;
@@ -187,7 +226,7 @@ export default async function InstructorTeamPage({ params, searchParams }: { par
                     <li key={m.user_id}>
                       {/* One collapsible row per student: open it to see the ratings they gave. */}
                       <details className="group card overflow-hidden">
-                        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-wash [&::-webkit-details-marker]:hidden">
+                        <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-wash sm:px-5 [&::-webkit-details-marker]:hidden">
                           <span className="min-w-0 truncate font-semibold">
                             {m.first_name} {m.last_name}
                           </span>
@@ -200,7 +239,7 @@ export default async function InstructorTeamPage({ params, searchParams }: { par
                             </svg>
                           </span>
                         </summary>
-                        <div className="space-y-4 border-t border-line px-4 py-3">
+                        <div className="space-y-4 border-t border-line px-4 py-3 sm:px-5">
                           {given.map(({ milestone, ratings }) => (
                             <div key={milestone.milestone_id}>
                               <p className="section-label">{milestone.milestone_name}</p>
@@ -228,73 +267,77 @@ export default async function InstructorTeamPage({ params, searchParams }: { par
                 })}
               </ul>
             )}
-          </section>
+          </>
         )}
 
         {tab === "tasks" && (
-          <div className="grid gap-8 lg:grid-cols-2">
-            <section>
-              <h2 className="text-heading">Reassign a task</h2>
-              <p className="mt-1 text-small text-hint">After meeting the team, record who takes over. Future work on the task counts for the new owner.</p>
-              {assignedTasks.length === 0 ? (
-                <div className="mt-3">
-                  <EmptyState title="No assigned tasks">The team hasn&apos;t assigned any tasks yet.</EmptyState>
-                </div>
-              ) : (
-                <ActionForm action={reassignAction.bind(null, teamId)} resetOnSuccess className="card mt-3 space-y-3 p-4">
-                  <Field label="Task" htmlFor="taskId">
-                    <select id="taskId" name="taskId" className="field-input">
-                      {assignedTasks.map((t) => (
-                        <option key={t.task_id} value={t.task_id}>
-                          {t.task_title} ({t.owner_first} {t.owner_last})
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
-                  <Field label="Give it to" htmlFor="toUserId">
-                    <select id="toUserId" name="toUserId" className="field-input">
-                      {members.map((m) => (
-                        <option key={m.user_id} value={m.user_id}>
-                          {m.first_name} {m.last_name}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
-                  <Field label="Reason" htmlFor="reason">
-                    <input id="reason" name="reason" maxLength={255} placeholder="The team sees this, e.g. agreed in office hours" className="field-input" />
-                  </Field>
-                  <SubmitButton pendingText="Saving…">Record reassignment</SubmitButton>
-                </ActionForm>
-              )}
+          <div className="grid items-start gap-4 sm:gap-6 md:grid-cols-2">
+            <section className="card">
+              <div className="card-head rounded-t-(--radius-card) bg-primary-tint">
+                <h2 className="flex items-center gap-2">
+                  <span aria-hidden className="size-2 rounded-full bg-primary" />
+                  Reassign a task
+                </h2>
+              </div>
+              <div className="p-4 sm:p-5">
+                <p className="mb-4 text-small text-hint">After meeting the team, record who takes over. Future work on the task counts for the new owner.</p>
+                {assignedTasks.length === 0 ? (
+                  <p className="text-hint">The team hasn&apos;t assigned any tasks yet.</p>
+                ) : (
+                  <ActionForm action={reassignAction.bind(null, teamId)} resetOnSuccess className="space-y-3">
+                    <Field label="Task" htmlFor="taskId">
+                      <select id="taskId" name="taskId" className="field-input">
+                        {assignedTasks.map((t) => (
+                          <option key={t.task_id} value={t.task_id}>
+                            {t.task_title} ({t.owner_first} {t.owner_last})
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                    <Field label="Give it to" htmlFor="toUserId">
+                      <select id="toUserId" name="toUserId" className="field-input">
+                        {members.map((m) => (
+                          <option key={m.user_id} value={m.user_id}>
+                            {m.first_name} {m.last_name}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                    <Field label="Reason" htmlFor="reason">
+                      <input id="reason" name="reason" maxLength={255} placeholder="The team sees this, e.g. agreed in office hours" className="field-input" />
+                    </Field>
+                    <SubmitButton full pendingText="Saving…">
+                      Record reassignment
+                    </SubmitButton>
+                  </ActionForm>
+                )}
+              </div>
             </section>
-            <section>
-              <h2 className="text-heading">History</h2>
-              {history.length === 0 ? (
-                <p className="mt-1 text-small text-hint">No reassignments or deleted tasks yet.</p>
-              ) : (
-                <div className="mt-3">
-                  <TaskHistoryList items={history} viewer="instructor" />
-                </div>
-              )}
+            <section className="card overflow-hidden">
+              <div className="card-head">
+                <h2 className="flex items-center gap-2">
+                  Task history
+                  {history.length > 0 && <span className="rounded-full bg-wash px-2 py-0.5 text-small font-normal text-hint">{history.length}</span>}
+                </h2>
+              </div>
+              <div className="p-4 sm:p-5">
+                {history.length === 0 ? <p className="text-center text-hint">No reassignments or deleted tasks yet.</p> : <TaskHistoryList items={history} viewer="instructor" />}
+              </div>
             </section>
           </div>
         )}
 
         {tab === "settings" && (
-          <div className="max-w-2xl space-y-6">
+          <div className="grid items-start gap-4 sm:gap-6 md:grid-cols-2">
             {team.channel_status === "published" && (
               <section className="card p-4 sm:p-5">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="font-semibold">Finish channel</p>
-                    <p className="text-small text-hint">Students can still read it but can&apos;t log new work.</p>
-                  </div>
-                  <ActionForm action={finishTeamAction.bind(null, teamId)}>
-                    <SubmitButton variant="secondary" small pendingText="Finishing…">
-                      Finish channel
-                    </SubmitButton>
-                  </ActionForm>
-                </div>
+                <p className="font-semibold">Finish channel</p>
+                <p className="mt-1 text-small text-hint">Students can still read it but can&apos;t log new work.</p>
+                <ActionForm action={finishTeamAction.bind(null, teamId)} className="mt-4">
+                  <SubmitButton variant="secondary" small pendingText="Finishing…">
+                    Finish channel
+                  </SubmitButton>
+                </ActionForm>
               </section>
             )}
             <DangerZone

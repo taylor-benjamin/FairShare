@@ -37,7 +37,7 @@ export default async function CharterPage({ params, searchParams }: { params: Pr
   const teammates = members.filter((m) => m.user_id !== user.userId);
 
   return (
-    <Page narrow>
+    <Page>
       {welcome && (
         <div className="mb-4">
           <Notice tone="success">
@@ -56,8 +56,9 @@ export default async function CharterPage({ params, searchParams }: { params: Pr
         </p>
       )}
 
+      <div className="mt-5 grid items-start gap-4 sm:gap-6 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
       {/* Goals and expectations: everyone agrees, then they lock. */}
-      <section className="card mt-5 space-y-5 p-4 sm:p-5">
+      <section className="card space-y-5 p-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="section-label">Goals and expectations</p>
           {locked && (
@@ -148,7 +149,7 @@ export default async function CharterPage({ params, searchParams }: { params: Pr
       </section>
 
       {/* Roles: each student sets their own. */}
-      <section className="card mt-5 space-y-4 p-4 sm:p-5">
+      <section className="card space-y-4 p-4 sm:p-5">
         <p className="section-label">Roles</p>
         {canWrite && (
           <ActionForm action={saveRoleAction.bind(null, teamId)} className="flex flex-col gap-3 sm:flex-row sm:items-end">
@@ -176,6 +177,7 @@ export default async function CharterPage({ params, searchParams }: { params: Pr
           </ul>
         )}
       </section>
+      </div>
     </Page>
   );
 }

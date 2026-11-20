@@ -100,12 +100,21 @@ body {
 
 @layer components {
   /* Cards: white, rounded, soft shadow; lift on hover when they're links */
+  /* Cards: white, rounded, a hairline border and the faintest shadow, so pages read as one even grid. */
   .card {
-    @apply rounded-(--radius-card) border border-line/70 bg-surface shadow-(--shadow-soft);
+    @apply rounded-(--radius-card) border border-line bg-surface shadow-[0_1px_2px_rgb(15_23_42/0.04)];
   }
   a.card,
   .card-hover {
-    @apply transition duration-300 ease-(--ease-fluid) hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-(--shadow-lift);
+    @apply transition duration-200 ease-(--ease-fluid) hover:border-primary/40 hover:shadow-(--shadow-soft);
+  }
+  /* Card title row: <div class="card-head"><h2>Title</h2> …actions</div> */
+  .card-head {
+    @apply flex min-h-14 items-center justify-between gap-3 border-b border-line px-4 py-3 sm:px-5;
+  }
+  .card-head > h2,
+  .card-head > h3 {
+    @apply font-semibold;
   }
   .card-muted {
     @apply rounded-(--radius-card) bg-wash;
@@ -127,6 +136,11 @@ body {
     background-repeat: no-repeat;
     background-position: right 0.85rem center;
     background-size: 1.1rem;
+  }
+
+  /* A row inside a dropdown menu (MoreMenu, UserMenu). */
+  .menu-item {
+    @apply block w-full cursor-pointer rounded-xl px-3 py-2 text-left text-small text-ink transition-colors hover:bg-wash;
   }
 
   .section-label {
