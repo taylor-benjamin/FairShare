@@ -38,6 +38,12 @@ export async function listMyProjects(user: SessionUser | null) {
   return projects.byInstructor(user.userId);
 }
 
+/** Projects still waiting for their class list, for "Upload class list" in the top bar's New menu. */
+export async function projectsAwaitingClassList(user: SessionUser | null) {
+  authorize(user, "course.create");
+  return projects.withoutTeamsForInstructor(user.userId);
+}
+
 /** Loads a project and checks the user is the instructor who owns it. */
 export async function getProject(user: SessionUser | null, projectId: number): Promise<ProjectWithCourse> {
   const project = Number.isInteger(projectId) ? await projects.byId(projectId) : null;

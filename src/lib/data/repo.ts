@@ -97,6 +97,15 @@ export const projects = {
        WHERE c.instructor_id = ? ORDER BY p.start_date DESC, p.project_id DESC`,
       instructorId,
     ),
+  /** This instructor's projects that have no teams yet, i.e. still waiting for a class list. */
+  withoutTeamsForInstructor: (instructorId: number) =>
+    all<{ project_id: number; project_name: string; course_code: string; section_number: string }>(
+      `SELECT p.project_id, p.project_name, c.course_code, c.section_number
+       FROM projects p JOIN courses c ON c.course_id = p.course_id
+       WHERE c.instructor_id = ? AND NOT EXISTS (SELECT 1 FROM teams t WHERE t.project_id = p.project_id)
+       ORDER BY p.start_date DESC, p.project_id DESC`,
+      instructorId,
+    ),
   create: (p: Omit<ProjectRow, "project_id">) =>
     run(
       "INSERT INTO projects (course_id, template_id, project_name, start_date, end_date, anonymous_evals, member_access) VALUES (?, ?, ?, ?, ?, ?, ?)",

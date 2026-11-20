@@ -9,6 +9,8 @@ import { Field, LinkButton } from "@/components/ui";
 interface Props {
   templates: { template_id: number; template_name: string; template_description: string }[];
   courses: { course_id: number; course_code: string; course_name: string; section_number: string }[];
+  /** Start with "A different course or section" chosen (from "New class" in the top bar). */
+  newClass?: boolean;
 }
 
 /** A date on this device as YYYY-MM-DD, `addDays` from today. */
@@ -18,10 +20,10 @@ function localDate(addDays = 0): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-export function NewProjectForm({ templates, courses }: Props) {
+export function NewProjectForm({ templates, courses, newClass = false }: Props) {
   const [state, action] = useActionState(createProjectAction, {});
   const v = state.values ?? {};
-  const [courseId, setCourseId] = useState(v.courseId || (courses[0] ? String(courses[0].course_id) : "new"));
+  const [courseId, setCourseId] = useState(v.courseId || (newClass || !courses[0] ? "new" : String(courses[0].course_id)));
   // Default dates come from the instructor's own device, so they're never "tomorrow" in the evening.
   const [startDate, setStartDate] = useState(v.startDate ?? "");
   const [endDate, setEndDate] = useState(v.endDate ?? "");

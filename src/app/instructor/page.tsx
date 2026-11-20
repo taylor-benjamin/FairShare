@@ -60,11 +60,7 @@ export default async function InstructorDashboard({ searchParams }: { searchPara
                   </span>
                 </p>
               </Link>
-            ) : (
-              <div className="mb-6">
-                <Notice tone="success">Nothing needs your review right now.</Notice>
-              </div>
-            )}
+            ) : null}
 
             {withSignals.map(({ project, teams, next }) => (
               <section key={project.project_id} className="mb-10">
@@ -79,7 +75,9 @@ export default async function InstructorDashboard({ searchParams }: { searchPara
                     Open project <ArrowIcon />
                   </Link>
                 </div>
-                {next && (
+                {/* Uploading the class list lives in the top bar's New menu. */}
+                {next?.kind === "upload" && <p className="text-small text-hint">No teams yet. Upload the class list from the New menu.</p>}
+                {next && next.kind !== "upload" && (
                   <div className="mb-3">
                     <NextStepCard step={next} projectId={project.project_id} />
                   </div>
