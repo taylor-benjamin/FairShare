@@ -91,7 +91,7 @@ export default async function ReviewsPage() {
                 </li>
               ))}
             </Panel>
-            <p className="px-1 text-small text-hint">FairShare checks every set of ratings for two patterns. A flag isn&apos;t proof. Dismiss any that look fine.</p>
+            <p className="px-1 text-small text-hint">A flag isn&apos;t proof. Dismiss any that look fine.</p>
             {flags.reviewed.length > 0 && (
               <History title="Recently reviewed" count={flags.reviewed.length}>
                 {flags.reviewed.map((f) => (
