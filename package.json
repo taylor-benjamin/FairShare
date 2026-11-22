@@ -14,6 +14,8 @@
     "db:setup": "node scripts/db-setup.mjs",
     "db:reset": "node scripts/db-setup.mjs --reset",
     "db:seed:remote": "npm run db:seed:generate && wrangler d1 execute DB --remote --file=./db/seed.sql",
+    "demo:secrets": "tsx scripts/demo-secrets.ts",
+    "demo:deploy": "opennextjs-cloudflare build --config wrangler.demo.jsonc && wrangler d1 migrations apply DB --remote --config wrangler.demo.jsonc && opennextjs-cloudflare deploy --config wrangler.demo.jsonc",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
     "test": "vitest run",
     "lint": "tsc --noEmit"

@@ -105,6 +105,27 @@ A ready-to-use invite link (Team Pelicans, not yet accepted): **`/invite/demo-in
 
 ---
 
+## Public demo mode
+
+Set `DEMO_MODE=1` to run the shared demo. Use a separate Worker and D1 database, never the real site.
+
+- Log in as `professor@fairshare.demo` or `student@fairshare.demo` (password `FairShare2026!`). Each sign-in gets a private copy of the class.
+- Use the demo bar to view the app as anyone in that copy, or to reset it.
+- Copies are deleted after 24 hours. No email is sent.
+- The real class list stays in `demo-roster.local.json` (ignored by Git) and the `DEMO_ROSTER` Cloudflare secret. Without it, the demo shows placeholder names.
+
+First-time setup, run by the Cloudflare account owner:
+
+```
+npx wrangler d1 create fairshare-demo-db   # paste the id into wrangler.demo.jsonc
+npm run demo:deploy
+npm run demo:secrets
+```
+
+To publish later demo changes, run `npm run demo:deploy`. Pushing to `main` does not update the demo.
+
+---
+
 ## Integrity checks
 
 Integrity and early-warning thresholds live in [`src/config/integrity-rules.ts`](src/config/integrity-rules.ts):

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DemoBar } from "./demo-bar";
 import { LogoMark } from "./logo";
 import { MobileMenu } from "./mobile-menu";
 import { NavLinks } from "./nav-links";
@@ -6,6 +7,7 @@ import { NewMenu } from "./new-menu";
 import { NotificationBell } from "./notification-bell";
 import { TeamsMenu, type NavTeam } from "./teams-menu";
 import { UserMenu } from "./user-menu";
+import { isDemoMode } from "@/lib/env";
 import { projectsAwaitingClassList } from "@/lib/services/class-setup";
 import { getNotifications } from "@/lib/services/notifications";
 import { myTeams } from "@/lib/services/team-health";
@@ -64,6 +66,7 @@ export async function AppNav({ user }: { user: SessionUser }) {
           <MobileMenu links={links} name={`${user.firstName} ${user.lastName}`} role={user.role} />
         </div>
       </div>
+      {isDemoMode() && <DemoBar user={user} />}
     </nav>
   );
 }

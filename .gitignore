@@ -160,3 +160,4 @@ next-env.d.ts
 .env*
 !.dev.vars.example
 db/seed.sql
+demo-roster.local.json

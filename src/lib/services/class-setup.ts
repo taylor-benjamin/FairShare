@@ -17,11 +17,21 @@ import {
   users,
   type ProjectWithCourse,
 } from "../data/repo";
+import { displayEmail, scopeEmail, workspaceOf } from "../demo";
 import { sendEmail } from "../email";
+import { isDemoMode } from "../env";
 import { groupRosterByTeam, isIsoDate, nextSetupStep, parseRosterCsv } from "../rules";
 import type { SessionUser } from "../types";
 import { authorizeTeam, NotFoundError, UserError } from "./common";
 import { refreshCharter } from "./team-health";
+
+/** In the demo, invited emails stay inside the visitor's copy. Elsewhere they're unchanged. */
+function inviteEmail(user: SessionUser | null, email: string) {
+  const workspace = isDemoMode() && user ? workspaceOf(user.email) : null;
+  return workspace ? scopeEmail(email, workspace) : email;
+}
+
+const shownEmail = (email: string) => (isDemoMode() ? displayEmail(email) : email);
 
 export async function listTemplates(user: SessionUser | null) {
   authorize(user, "course.create");
@@ -120,7 +130,7 @@ export async function importRoster(user: SessionUser | null, projectId: number, 
     return { errors: [`These teams are already published and can't be replaced: ${clash.join(", ")}.`], teamCount: 0, studentCount: 0 };
   }
 
-  const withTokens = new Map([...grouped].map(([team, members]) => [team, members.map((m) => ({ email: m.email, token: randomToken() }))]));
+  const withTokens = new Map([...grouped].map(([team, members]) => [team, members.map((m) => ({ email: inviteEmail(user, m.email), token: randomToken() }))]));
   await deleteDraftTeams(projectId);
   await createDraftTeams(projectId, withTokens);
   return { errors: [], teamCount: grouped.size, studentCount: rows.length };
@@ -151,7 +161,7 @@ export function explainSettings(p: Pick<ProjectWithCourse, "anonymous_evals" | "
 export async function getSetupOverview(user: SessionUser | null, projectId: number) {
   const project = await getProject(user, projectId);
   const teamRows = await teams.byProject(projectId);
-  const withInvites = await Promise.all(teamRows.map(async (t) => ({ ...t, invitations: await invitations.byTeam(t.team_id) })));
+  const withInvites = await Promise.all(teamRows.map(async (t) => ({ ...t, invitations: (await invitations.byTeam(t.team_id)).map((i) => ({ ...i, invited_email: shownEmail(i.invited_email) })) })));
   return { project, teams: withInvites, milestones: await milestones.byProject(projectId), settings: explainSettings(project) };
 }
 
@@ -270,8 +280,9 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 /** Invites one more student to an existing team and emails them (published teams only; drafts are emailed on publish). */
 export async function addStudent(user: SessionUser | null, teamId: number, emailRaw: string, appUrl: string) {
   const { team } = await authorizeTeam(user, "team.manage", teamId);
-  const email = emailRaw.trim().toLowerCase();
-  if (!EMAIL_RE.test(email) || email.length > 100) throw new UserError("Enter the student's email address.");
+  const typed = emailRaw.trim().toLowerCase();
+  if (!EMAIL_RE.test(typed) || typed.length > 100) throw new UserError("Enter the student's email address.");
+  const email = inviteEmail(user, typed);
   const existingUser = await users.byEmail(email);
   if (existingUser?.system_role === "instructor") throw new UserError("That email belongs to an instructor account.");
   if (existingUser && (await memberships.forUser(teamId, existingUser.user_id))) throw new UserError("That student is already on this team.");
@@ -308,7 +319,11 @@ export async function cancelInvitation(user: SessionUser | null, invitationId: n
 export async function getTeamRoster(user: SessionUser | null, teamId: number) {
   const { team } = await authorizeTeam(user, "team.manage", teamId);
   const [members, invites] = await Promise.all([memberships.byTeam(teamId), invitations.byTeam(teamId)]);
-  return { team, members, pending: invites.filter((i) => i.invite_status === "pending") };
+  return {
+    team,
+    members: members.map((m) => ({ ...m, email: shownEmail(m.email) })),
+    pending: invites.filter((i) => i.invite_status === "pending").map((i) => ({ ...i, invited_email: shownEmail(i.invited_email) })),
+  };
 }
 
 /** The one thing the instructor should do next on this project (null when nothing is waiting). */

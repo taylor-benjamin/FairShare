@@ -4,9 +4,11 @@ import { hashPassword, passwordFingerprint, signResetToken, verifyPassword, veri
 import { endAllSessions, endSession, startSession, toSessionUser } from "../auth/session";
 import { invitations, users } from "../data/repo";
 import { sendEmail } from "../email";
-import { sessionSecret } from "../env";
+import { displayEmail } from "../demo";
+import { isDemoMode, sessionSecret } from "../env";
 import type { SessionUser } from "../types";
 import { loadTeam, UserError } from "./common";
+import { logInToDemo } from "./demo";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const RESET_COOLDOWN_MS = 5 * 60 * 1000;
@@ -24,6 +26,7 @@ function checkName(first: string, last: string) {
 }
 
 export async function logIn(email: string, password: string): Promise<SessionUser> {
+  if (isDemoMode()) return logInToDemo(email, password);
   const row = await users.byEmail(email);
   if (!row) {
     dummyHash ??= await hashPassword("not-a-real-password");
@@ -51,6 +54,7 @@ export async function logOut(): Promise<void> {
  * Always finishes the same way, so the page never reveals whether an email is registered.
  */
 export async function requestPasswordReset(emailRaw: string, appUrl: string): Promise<void> {
+  if (isDemoMode()) throw new UserError("Password reset is off in the demo.");
   const email = emailRaw.trim().toLowerCase();
   if (!EMAIL_RE.test(email) || email.length > 100) throw new UserError("Please enter the email address you log in with.");
   const row = await users.byEmail(email);
@@ -84,6 +88,7 @@ export async function describeResetToken(token: string): Promise<{ valid: boolea
 
 /** Sets the new password, which also invalidates the link, then signs the user in. */
 export async function resetPassword(token: string, password: string, confirm: string): Promise<SessionUser> {
+  if (isDemoMode()) throw new UserError("Password reset is off in the demo.");
   const row = await userForResetToken(token);
   if (!row) throw new UserError("This reset link has expired or was already used. Ask for a new one.");
   checkPassword(password);
@@ -99,6 +104,7 @@ export async function resetPassword(token: string, password: string, confirm: st
  * instructor's roster sends, so they land in the right team automatically.
  */
 export async function signUp(input: { firstName: string; lastName: string; email: string; password: string; appUrl: string }): Promise<SessionUser> {
+  if (isDemoMode()) throw new UserError("Sign up is off in the demo.");
   const email = input.email.trim().toLowerCase();
   checkName(input.firstName, input.lastName);
   if (!EMAIL_RE.test(email) || email.length > 100) throw new UserError("Please enter a valid email address.");
@@ -140,7 +146,7 @@ export async function describeInvite(token: string): Promise<InviteInfo> {
   if (team.channel_status === "draft") return { status: "not_ready" };
   return {
     status: inv.invite_status,
-    email: inv.invited_email,
+    email: isDemoMode() ? displayEmail(inv.invited_email) : inv.invited_email,
     teamName: team.team_name,
     courseLabel: `${team.course_code} · Section ${team.section_number} · ${team.project_name}`,
     hasAccount: !!(await users.byEmail(inv.invited_email)),
@@ -161,7 +167,8 @@ export async function acceptInvite(token: string, input: { firstName: string; la
   let user = await users.byEmail(inv.invited_email);
   if (user) {
     if (user.system_role === "instructor") throw new UserError("This email belongs to an instructor account. Ask your instructor to use a different email.");
-    if (!(await verifyPassword(input.password, user.password_hash))) throw new UserError("That password doesn't match your existing FairShare account.");
+    // Demo copies have no individual passwords.
+    if (!isDemoMode() && !(await verifyPassword(input.password, user.password_hash))) throw new UserError("That password doesn't match your existing FairShare account.");
     // Any older non-student account (e.g. a former "viewer") becomes a student when it accepts a team invite.
     if (user.system_role !== "student") await users.setRole(user.user_id, "student");
   } else {

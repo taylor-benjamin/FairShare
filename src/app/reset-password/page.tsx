@@ -1,13 +1,16 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { resetPasswordAction } from "@/app/actions/auth";
 import { AuthShell } from "@/components/auth-shell";
 import { Notice } from "@/components/ui";
+import { isDemoMode } from "@/lib/env";
 import { describeResetToken } from "@/lib/services/auth-service";
 import { ResetPasswordForm } from "./reset-form";
 
 export const metadata = { title: "Choose a new password" };
 
 export default async function ResetPasswordPage({ searchParams }: { searchParams: Promise<{ token?: string }> }) {
+  if (isDemoMode()) redirect("/login");
   const token = (await searchParams).token ?? "";
   const info = await describeResetToken(token);
 

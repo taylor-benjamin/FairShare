@@ -1,0 +1,28 @@
+// The public demo site. Separate Worker and separate database from fairshare.page.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "fairshare-demo",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "fairshare-demo-db",
+      // Paste the id printed by: npx wrangler d1 create fairshare-demo-db
+      "database_id": "ae5062e9-a366-4f09-a8a5-a105ac945a08",
+      "migrations_dir": "db/migrations"
+    }
+  ],
+  "routes": [{ "pattern": "demo.fairshare.page", "custom_domain": true }],
+  "workers_dev": false,
+  "vars": {
+    "DEMO_MODE": "1",
+    "APP_URL": "https://demo.fairshare.page"
+  },
+  "observability": { "enabled": true }
+}

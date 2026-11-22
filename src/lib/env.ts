@@ -18,6 +18,28 @@ export function config() {
   };
 }
 
+/** True only on the public demo site. Never set this on the real site. */
+export function isDemoMode(): boolean {
+  let value: string | undefined;
+  try {
+    value = (getCloudflareContext().env as { DEMO_MODE?: string }).DEMO_MODE;
+  } catch {
+    // Outside a request: fall back to process.env below.
+  }
+  return (value || process.env.DEMO_MODE) === "1";
+}
+
+/** The real class list for the demo site, kept in a secret so it never enters Git. */
+export function demoRosterJson(): string | undefined {
+  let value: string | undefined;
+  try {
+    value = (getCloudflareContext().env as { DEMO_ROSTER?: string }).DEMO_ROSTER;
+  } catch {
+    // Outside a request: fall back to process.env below.
+  }
+  return value || process.env.DEMO_ROSTER || undefined;
+}
+
 export function sessionSecret(): string {
   const s = config().SESSION_SECRET;
   if (s.length < 32) {

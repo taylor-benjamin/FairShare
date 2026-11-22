@@ -1,5 +1,5 @@
 import "server-only";
-import { config } from "./env";
+import { config, isDemoMode } from "./env";
 
 export interface Email {
   to: string;
@@ -21,6 +21,8 @@ function toHtml(text: string): string {
  * With no RESEND_API_KEY the email is printed to the terminal instead, so local setup never fails.
  */
 export async function sendEmail(email: Email): Promise<{ delivered: boolean; error?: string }> {
+  // The demo never sends mail, even if an email key is present.
+  if (isDemoMode()) return { delivered: true };
   const { RESEND_API_KEY, EMAIL_FROM } = config();
   if (!RESEND_API_KEY) {
     console.log(

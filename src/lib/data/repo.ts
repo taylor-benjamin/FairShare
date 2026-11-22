@@ -305,6 +305,52 @@ export async function deleteDraftTeams(projectId: number): Promise<void> {
   ]);
 }
 
+// ── Demo workspaces (demo mode only) ─────────────────────────────────────────
+
+const DEMO_ACCOUNT = "email LIKE '%+%@fairshare.demo'";
+const demoSuffix = "substr(email, instr(email, '+'))";
+
+/** Deletes whole demo copies, children first. `suffixes` selects the "+workspace@fairshare.demo" endings to remove. */
+function demoDeleteStatements(suffixes: string, params: unknown[]) {
+  const accounts = `SELECT user_id FROM users WHERE ${DEMO_ACCOUNT} AND ${demoSuffix} IN (${suffixes})`;
+  const courseIds = `SELECT course_id FROM courses WHERE instructor_id IN (${accounts})`;
+  const projectIds = `SELECT project_id FROM projects WHERE course_id IN (${courseIds})`;
+  const teamIds = `SELECT team_id FROM teams WHERE project_id IN (${projectIds})`;
+  return [
+    ...teamDeleteStatements(teamIds, params),
+    stmt(`DELETE FROM milestones WHERE project_id IN (${projectIds})`, ...params),
+    stmt(`DELETE FROM projects WHERE course_id IN (${courseIds})`, ...params),
+    stmt(`DELETE FROM courses WHERE instructor_id IN (${accounts})`, ...params),
+    stmt(`DELETE FROM sessions WHERE user_id IN (${accounts})`, ...params),
+    stmt(`DELETE FROM users WHERE ${DEMO_ACCOUNT} AND ${demoSuffix} IN (${suffixes})`, ...params),
+  ];
+}
+
+export const demoWorkspaces = {
+  /** One INSERT per table (D1 limits queries per request), all in one transaction. Table names come from our code. */
+  insert: (tables: { table: string; rows: Record<string, unknown>[] }[]) =>
+    batch(
+      tables
+        .filter((t) => t.rows.length > 0)
+        .map(({ table, rows }) => {
+          const columns = Object.keys(rows[0]);
+          const values = columns.map((c) => `json_extract(value, '$.${c}')`).join(", ");
+          return stmt(`INSERT INTO ${table} (${columns.join(", ")}) SELECT ${values} FROM json_each(?)`, JSON.stringify(rows));
+        }),
+    ),
+  count: async () => (await first<{ n: number }>(`SELECT COUNT(*) AS n FROM users WHERE system_role = 'instructor' AND ${DEMO_ACCOUNT}`))?.n ?? 0,
+  people: (workspace: string) =>
+    all<{ user_id: number; first_name: string; last_name: string; system_role: SystemRole; team_name: string | null; team_role: string | null }>(
+      `SELECT u.user_id, u.first_name, u.last_name, u.system_role, t.team_name, m.team_role
+       FROM users u LEFT JOIN team_memberships m ON m.user_id = u.user_id LEFT JOIN teams t ON t.team_id = m.team_id
+       WHERE u.email LIKE ? ORDER BY t.team_name, u.first_name, u.last_name`,
+      `%+${workspace}@fairshare.demo`,
+    ),
+  remove: (workspace: string) => batch(demoDeleteStatements("SELECT ?", [`+${workspace}@fairshare.demo`])),
+  removeOlderThan: (cutoffIso: string) =>
+    batch(demoDeleteStatements(`SELECT ${demoSuffix} FROM users WHERE system_role = 'instructor' AND ${DEMO_ACCOUNT} AND created_date < ?`, [cutoffIso])),
+};
+
 // ── Charters and tasks ───────────────────────────────────────────────────────
 
 export type CharterWithEditor = CharterRow & { updated_by_first: string | null; updated_by_last: string | null };

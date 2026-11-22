@@ -7,7 +7,7 @@ import { SubmitButton } from "@/components/forms";
 import { Field } from "@/components/ui";
 import { PasswordInput } from "@/components/password-input";
 
-export function LoginForm() {
+export function LoginForm({ demo = false }: { demo?: boolean }) {
   const [state, action] = useActionState(loginAction, {});
   return (
     <form action={action} className="space-y-4" noValidate>
@@ -19,9 +19,11 @@ export function LoginForm() {
           <label htmlFor="password" className="block text-small text-ink">
             Password
           </label>
-          <Link href="/forgot-password" className="text-small font-semibold text-primary hover:underline">
-            Forgot password?
-          </Link>
+          {!demo && (
+            <Link href="/forgot-password" className="text-small font-semibold text-primary hover:underline">
+              Forgot password?
+            </Link>
+          )}
         </div>
         <PasswordInput id="password" autoComplete="current-password" required />
       </div>
@@ -33,14 +35,16 @@ export function LoginForm() {
       <SubmitButton full pendingText="Logging in…" className="sm:w-full">
         Log in
       </SubmitButton>
-      <p className="text-center text-small text-hint">
-        New instructor?{" "}
-        <Link href="/signup" className="link">
-          Create an account
-        </Link>
-        <br />
-        Students: use the invite link your instructor emailed you.
-      </p>
+      {!demo && (
+        <p className="text-center text-small text-hint">
+          New instructor?{" "}
+          <Link href="/signup" className="link">
+            Create an account
+          </Link>
+          <br />
+          Students: use the invite link your instructor emailed you.
+        </p>
+      )}
     </form>
   );
 }

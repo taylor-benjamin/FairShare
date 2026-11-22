@@ -1,11 +1,13 @@
 import { redirect } from "next/navigation";
 import { AuthShell } from "@/components/auth-shell";
 import { getCurrentUser, homeFor } from "@/lib/auth/session";
+import { isDemoMode } from "@/lib/env";
 import { SignupForm } from "../login/login-form";
 
 export const metadata = { title: "Create an account" };
 
 export default async function SignupPage() {
+  if (isDemoMode()) redirect("/login");
   const user = await getCurrentUser();
   if (user) redirect(homeFor(user.role));
   return (
