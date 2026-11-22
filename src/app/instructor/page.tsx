@@ -95,36 +95,41 @@ export default async function InstructorDashboard({ searchParams }: { searchPara
               <StatTile label="To review" value={reviewCount} caption={`${plural(disputes.open.length, "dispute", "disputes")} · ${plural(flags.open.length, "flag", "flags")}`} tone="disputed" href="/instructor/reviews" />
             </div>
 
-            <Panel title="To do" tone="primary" count={todo.length} empty="You're all caught up.">
-              {todo}
-            </Panel>
+            {/* Side by side on desktop; each box is only as tall as its content. */}
+            <div className="grid items-start gap-4 sm:gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+              <Panel title="To do" tone="primary" count={todo.length} empty="You're all caught up.">
+                {todo}
+              </Panel>
 
-            {withSignals.map(({ project, teams }) => (
-              <section key={project.project_id} className="card overflow-hidden">
-                <div className="card-head">
-                  <div className="min-w-0">
-                    <h2 className="font-semibold">{project.project_name}</h2>
-                    <p className="text-small text-hint">
-                      {project.course_code} {project.course_name} · Section {project.section_number}
-                    </p>
-                  </div>
-                  <Link href={`/instructor/projects/${project.project_id}`} className="link inline-flex shrink-0 items-center gap-1 text-small">
-                    Open project <ArrowIcon />
-                  </Link>
-                </div>
-                {teams.length === 0 ? (
-                  <p className="px-4 py-6 text-center text-hint sm:px-5">No teams yet. Upload the class list from the New menu.</p>
-                ) : (
-                  <ul className="divide-y divide-line">
-                    {[...teams]
-                      .sort((a, b) => Number(b.needsAttention) - Number(a.needsAttention))
-                      .map((t) => (
-                        <TeamRow key={t.teamId} t={t} />
-                      ))}
-                  </ul>
-                )}
-              </section>
-            ))}
+              <div className="space-y-4 sm:space-y-6">
+                {withSignals.map(({ project, teams }) => (
+                  <section key={project.project_id} className="card overflow-hidden">
+                    <div className="card-head">
+                      <div className="min-w-0">
+                        <h2 className="font-semibold">{project.project_name}</h2>
+                        <p className="text-small text-hint">
+                          {project.course_code} {project.course_name} · Section {project.section_number}
+                        </p>
+                      </div>
+                      <Link href={`/instructor/projects/${project.project_id}`} className="link inline-flex shrink-0 items-center gap-1 text-small">
+                        Open project <ArrowIcon />
+                      </Link>
+                    </div>
+                    {teams.length === 0 ? (
+                      <p className="px-4 py-6 text-center text-hint sm:px-5">No teams yet. Upload the class list from the New menu.</p>
+                    ) : (
+                      <ul className="divide-y divide-line">
+                        {[...teams]
+                          .sort((a, b) => Number(b.needsAttention) - Number(a.needsAttention))
+                          .map((t) => (
+                            <TeamRow key={t.teamId} t={t} />
+                          ))}
+                      </ul>
+                    )}
+                  </section>
+                ))}
+              </div>
+            </div>
           </div>
         )}
       </Page>
@@ -148,7 +153,7 @@ function TeamRow({ t }: { t: TeamSignal }) {
     <li>
       <Link
         href={`/instructor/teams/${t.teamId}`}
-        className={`grid gap-3 px-4 py-4 transition-colors hover:bg-primary-tint/60 sm:px-5 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)_auto] md:items-center md:gap-6 ${t.needsAttention ? "bg-primary-tint/40" : ""}`}
+        className={`grid gap-3 px-4 py-4 transition-colors hover:bg-primary-tint/60 sm:px-5 ${t.needsAttention ? "bg-primary-tint/40" : ""}`}
       >
         <span className="min-w-0">
           <span className="flex flex-wrap items-center gap-2">
@@ -161,10 +166,7 @@ function TeamRow({ t }: { t: TeamSignal }) {
             {t.reasons.length > 0 && <span className="font-semibold text-primary-dark"> · {plural(t.reasons.length, "warning", "warnings")}</span>}
           </span>
         </span>
-        {t.channelStatus === "draft" ? <span className="hidden md:block" /> : <ShareBar members={t.memberHours} />}
-        <span aria-hidden className="hidden text-hint md:block">
-          <ArrowIcon />
-        </span>
+        {t.channelStatus !== "draft" && <ShareBar members={t.memberHours} />}
       </Link>
     </li>
   );
