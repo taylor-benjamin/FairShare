@@ -1,4 +1,4 @@
-// Student Dashboard Service: one student's to-dos, teams and recent work across all their teams.
+// Student Dashboard Service: one student's teams, deadlines and recent work, plus the to-dos for the bell.
 import "server-only";
 import { studentDashboard, teams } from "../data/repo";
 import { addDaysIso, daysUntil, dueLabel } from "../rules";
@@ -14,7 +14,7 @@ export interface TodoItem {
 
 /**
  * The student's teams and everything waiting on them (to confirm, to rate, delete requests, charter steps).
- * Shared by the dashboard's To do list and the notifications menu.
+ * The to-dos appear in the notifications menu; the dashboard reuses the counts.
  */
 export async function loadStudentTodos(user: SessionUser) {
   const myTeams = await teams.forStudent(user.userId);
@@ -61,7 +61,7 @@ export async function loadStudentTodos(user: SessionUser) {
 export async function getStudentDashboard(user: SessionUser | null) {
   if (!user || user.role !== "student") return null;
 
-  const { myTeams, review, ratings, todos, multiTeam, reviewBy } = await loadStudentTodos(user);
+  const { myTeams, review, ratings, multiTeam, reviewBy } = await loadStudentTodos(user);
   const today = new Date().toISOString().slice(0, 10);
   const until = addDaysIso(today, 14);
   const [totals, recent, taskDue, milestoneDue] = await Promise.all([
@@ -96,7 +96,6 @@ export async function getStudentDashboard(user: SessionUser | null) {
   });
 
   return {
-    todos,
     deadlines,
     teams: teamCards,
     recent: recent.map((c) => ({

@@ -412,6 +412,22 @@ export function nextSetupStep(input: {
   return null;
 }
 
+/** The page where the instructor handles this step. */
+export function nextStepHref(step: NonNullable<NextStep>, projectId: number): string {
+  const project = `/instructor/projects/${projectId}`;
+  switch (step.kind) {
+    case "upload":
+      return `${project}/roster`;
+    case "publish":
+      return project;
+    case "add-milestone":
+    case "complete-milestone":
+      return `${project}?tab=milestones`;
+    case "invites":
+      return step.teamId ? `/instructor/teams/${step.teamId}?tab=members` : project;
+  }
+}
+
 // ── Deleting tasks ───────────────────────────────────────────────────────────
 
 export interface TaskForDelete {

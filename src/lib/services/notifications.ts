@@ -3,8 +3,9 @@
 import "server-only";
 import { disputes, flags, milestones, studentDashboard } from "../data/repo";
 import { authorize } from "../permissions";
-import { addDaysIso, daysUntil, dueLabel } from "../rules";
+import { addDaysIso, daysUntil, dueLabel, nextStepHref } from "../rules";
 import type { AppNotification, SessionUser } from "../types";
+import { listMyProjects, projectNextStep } from "./class-setup";
 import { loadStudentTodos } from "./student-dashboard";
 
 /** How far ahead upcoming deadlines show up. */
@@ -16,7 +17,8 @@ const utcToday = () => new Date().toISOString().slice(0, 10);
 /**
  * Students: overdue tasks, then things waiting on them (confirm, rate, delete requests, charter),
  * then their disputed entries, then tasks and milestones due in the next week.
- * Instructors: disputes and rating flags to review, and milestones that are past due or due soon.
+ * Instructors: disputes and rating flags to review, each project's next setup step, and milestones
+ * that are past due or due soon.
  */
 export async function getNotifications(user: SessionUser | null, today: string = utcToday()): Promise<AppNotification[]> {
   if (!user) return [];
@@ -75,24 +77,34 @@ async function studentNotifications(user: SessionUser, today: string, until: str
 
 async function instructorNotifications(user: SessionUser, today: string, until: string): Promise<AppNotification[]> {
   authorize(user, "course.create"); // instructors only; every query is scoped to their own courses
-  const [d, f, ms] = await Promise.all([
+  const [d, f, ms, projects] = await Promise.all([
     disputes.openCountForInstructor(user.userId),
     flags.openCountForInstructor(user.userId),
     milestones.openDueForInstructor(user.userId, until),
+    listMyProjects(user),
   ]);
+  const steps = await Promise.all(projects.map(async (p) => ({ project: p, step: await projectNextStep(user, p.project_id) })));
   const out: AppNotification[] = [];
   const nd = d?.n ?? 0;
   const nf = f?.n ?? 0;
   if (nd > 0) out.push({ key: "disputes", label: `${nd} disputed ${nd === 1 ? "entry" : "entries"} to review`, href: "/instructor/reviews", tone: "review" });
   if (nf > 0) out.push({ key: "flags", label: `${nf} rating ${nf === 1 ? "pattern" : "patterns"} to review`, href: "/instructor/reviews", tone: "review" });
+  for (const { project, step } of steps) {
+    // Uploading lives in the New menu, and milestones to complete are listed below.
+    if (!step || step.kind === "upload") continue;
+    if (step.kind === "complete-milestone" && ms.some((m) => m.milestone_id === step.milestoneId)) continue;
+    out.push({ key: `step-${project.project_id}`, label: step.title, detail: project.project_name, href: nextStepHref(step, project.project_id), tone: "warning" });
+  }
   for (const m of ms) {
-    const late = daysUntil(m.due_date, today) < 0;
+    const days = daysUntil(m.due_date, today);
+    const ready = days <= 0; // Due today or earlier, so it can be marked complete now.
+    const when = days < 0 ? `Was due ${shortDate(m.due_date)}` : dueLabel(m.due_date, today);
     out.push({
       key: `milestone-${m.milestone_id}`,
-      label: late ? `Mark ${m.milestone_name} complete` : m.milestone_name,
-      detail: late ? `Was due ${shortDate(m.due_date)} · Ratings open once it's complete · ${m.project_name}` : `${dueLabel(m.due_date, today)} · ${m.project_name}`,
-      href: `/instructor/projects/${m.project_id}`,
-      tone: late ? "warning" : "deadline",
+      label: ready ? `Mark ${m.milestone_name} complete` : m.milestone_name,
+      detail: ready ? `${when} · Ratings open once it's complete · ${m.project_name}` : `${when} · ${m.project_name}`,
+      href: `/instructor/projects/${m.project_id}?tab=milestones`,
+      tone: ready ? "warning" : "deadline",
     });
   }
   return out;

@@ -95,3 +95,7 @@ Choices made where the build spec or the Milestone 1/2 documents were silent, am
 ## Percentage ratings (Nov 2026)
 
 52. **Milestone ratings are a percentage split of the work, including yourself (migration 0006).** Each rater divides exactly 100.00% across the whole team with sliders. Shares are stored as whole basis points (2500 = 25.00%) in a new `contribution_shares` table, because `evaluations.score` is limited to 1 to 5 and forbids self ratings, and existing migrations can't change. Past 1 to 5 ratings stay in `evaluations` and still display. Moving a slider adjusts only sliders the rater hasn't set, unless those can't cover the change. Students see their self rating next to their teammates' average; instructors see self, peers and the gap for everyone. Integrity flags now fire on an even split across all members, or two people each giving the other at least 1.5 times an even share.
+
+## One place for to-dos (Nov 2026)
+
+53. **The dashboards no longer have a To do box; the notification bell is the one list.** Instructor next setup steps (publish, add a milestone, send invites) moved into the bell, and a milestone due today now reads "Mark ... complete" there. A complete-milestone step isn't listed twice when the milestone is already in the bell. Uploading a class list stays in the New menu.

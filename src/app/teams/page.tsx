@@ -11,7 +11,7 @@ const statusChip = {
   disputed: <Chip tone="disputed">Disputed</Chip>,
 } as const;
 
-/** The student's home after logging in: what needs them, what's due, their teams, and their recent work. */
+/** The student's home after logging in: their teams, what's due, and their recent work. To-dos live in the bell. */
 export default async function StudentDashboard() {
   const user = await requireUser(["student"]);
   const data = await getStudentDashboard(user);
@@ -19,7 +19,7 @@ export default async function StudentDashboard() {
   return (
     <>
       <AppNav user={user} />
-      <HeaderBar title={`Hi, ${user.firstName}`} subtitle="Here's what needs you today" />
+      <HeaderBar title={`Hi, ${user.firstName}`} subtitle="Your teams at a glance" />
       <Page>
         {!data || data.teams.length === 0 ? (
           <div className="mx-auto max-w-2xl">
@@ -36,17 +36,6 @@ export default async function StudentDashboard() {
 
             {/* One grid, so the boxes in each row start at the same line; each is only as tall as its content. */}
             <div className="grid items-start gap-4 sm:gap-6 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-                <Panel title="To do" tone="primary" count={data.todos.length} empty="You're all caught up.">
-                  {data.todos.map((t) => (
-                    <RowLink key={t.key} href={t.href}>
-                      <span className="flex min-w-0 items-center gap-2.5">
-                        <span aria-hidden className={`size-2 shrink-0 rounded-full ${t.tone === "warning" ? "bg-secondary" : "bg-primary"}`} />
-                        <span className="truncate">{t.label}</span>
-                      </span>
-                    </RowLink>
-                  ))}
-                </Panel>
-
                 <Panel title="My teams" tone="confirmed">
                   {data.teams.map((t) => (
                     <RowLink key={t.teamId} href={`/teams/${t.teamId}`}>
@@ -78,21 +67,23 @@ export default async function StudentDashboard() {
                   ))}
                 </Panel>
 
-                <Panel title="Your recent work" empty="Nothing logged yet. Open your team and log the first thing you finished.">
-                  {data.recent.map((c) => (
-                    <li key={c.id} className="flex items-start justify-between gap-3 px-4 py-3.5 sm:px-5">
-                      <span className="min-w-0">
-                        <span className="block">{c.description}</span>
-                        <span className="block text-small text-hint">
-                          {data.multiTeam && `${c.teamName} · `}
-                          {formatDate(c.completionDate)}
-                          {c.hours !== null && ` · ${formatHours(c.hours)}`}
+                <div className="lg:col-span-2">
+                  <Panel title="Your recent work" empty="Nothing logged yet. Open your team and log the first thing you finished.">
+                    {data.recent.map((c) => (
+                      <li key={c.id} className="flex items-start justify-between gap-3 px-4 py-3.5 sm:px-5">
+                        <span className="min-w-0">
+                          <span className="block">{c.description}</span>
+                          <span className="block text-small text-hint">
+                            {data.multiTeam && `${c.teamName} · `}
+                            {formatDate(c.completionDate)}
+                            {c.hours !== null && ` · ${formatHours(c.hours)}`}
+                          </span>
                         </span>
-                      </span>
-                      {statusChip[c.status]}
-                    </li>
-                  ))}
-                </Panel>
+                        {statusChip[c.status]}
+                      </li>
+                    ))}
+                  </Panel>
+                </div>
             </div>
           </>
         )}

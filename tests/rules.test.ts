@@ -16,6 +16,7 @@ import {
   charterStatus,
   isCharterComplete,
   nextSetupStep,
+  nextStepHref,
   nextVerificationStatus,
   parseRosterCsv,
   statusAfterDisputeResolution,
@@ -312,5 +313,15 @@ describe("percentage shares", () => {
     ];
     const flags = detectShareFlags(rows, [1, 2, 3, 4]).filter((f) => f.type === "reciprocal_scores");
     expect(flags.map((f) => f.raterId)).toEqual([1, 2]);
+  });
+});
+
+describe("next step links", () => {
+  it("sends each setup step to the page that handles it", () => {
+    expect(nextStepHref({ kind: "publish", title: "" }, 7)).toBe("/instructor/projects/7");
+    expect(nextStepHref({ kind: "add-milestone", title: "" }, 7)).toBe("/instructor/projects/7?tab=milestones");
+    expect(nextStepHref({ kind: "complete-milestone", title: "", milestoneId: 3 }, 7)).toBe("/instructor/projects/7?tab=milestones");
+    expect(nextStepHref({ kind: "invites", title: "", teamId: 4 }, 7)).toBe("/instructor/teams/4?tab=members");
+    expect(nextStepHref({ kind: "invites", title: "", teamId: null }, 7)).toBe("/instructor/projects/7");
   });
 });

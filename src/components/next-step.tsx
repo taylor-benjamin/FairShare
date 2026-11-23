@@ -1,23 +1,23 @@
 // One clear action per project for the instructor ("Next step" card).
 import { completeMilestoneAction } from "@/app/actions/instructor";
-import type { NextStep } from "@/lib/rules";
+import { nextStepHref, type NextStep } from "@/lib/rules";
 import { ActionForm, SubmitButton } from "./forms";
 import { LinkButton } from "./ui";
 
 /** The one button that does the next setup step (upload, publish, add or complete a milestone, send links). */
 export function NextStepAction({ step, projectId }: { step: NonNullable<NextStep>; projectId: number }) {
-  const project = `/instructor/projects/${projectId}`;
+  const href = nextStepHref(step, projectId);
   const action =
     step.kind === "upload" ? (
-      <LinkButton href={`${project}/roster`} small>
+      <LinkButton href={href} small>
         Upload class list
       </LinkButton>
     ) : step.kind === "publish" ? (
-      <LinkButton href={project} small>
+      <LinkButton href={href} small>
         Review and publish
       </LinkButton>
     ) : step.kind === "add-milestone" ? (
-      <LinkButton href={`${project}?tab=milestones`} small>
+      <LinkButton href={href} small>
         Add milestone
       </LinkButton>
     ) : step.kind === "complete-milestone" ? (
@@ -27,7 +27,7 @@ export function NextStepAction({ step, projectId }: { step: NonNullable<NextStep
         </SubmitButton>
       </ActionForm>
     ) : (
-      <LinkButton href={step.teamId ? `/instructor/teams/${step.teamId}?tab=members` : project} small>
+      <LinkButton href={href} small>
         Send links
       </LinkButton>
     );
