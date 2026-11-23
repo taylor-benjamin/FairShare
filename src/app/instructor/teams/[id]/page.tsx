@@ -15,7 +15,8 @@ import { requireUser } from "@/lib/auth/session";
 import { getTeamRoster } from "@/lib/services/class-setup";
 import { getChannel } from "@/lib/services/contribution-service";
 import { teamRatings } from "@/lib/services/peer-evaluation";
-import { formatShare } from "@/lib/rules";
+import { averageComparisons, formatShare } from "@/lib/rules";
+import { ContributionChart, type ContributionRow } from "@/components/contribution-chart";
 import { getTaskHistory, teamSignals } from "@/lib/services/team-health";
 import { TaskHistoryList } from "@/components/task-history";
 
@@ -57,6 +58,16 @@ export default async function InstructorTeamPage({ params, searchParams }: { par
       const mine = feed.filter((c) => c.user_id === m.user_id && c.verification_status === "confirmed");
       return { id: m.user_id, name: `${m.first_name} ${m.last_name}`, hours: mine.reduce((s, c) => s + (c.hours_spent ?? 0), 0), entries: mine.length };
     });
+  // Hours and ratings use the same student order and the same percent scale, so their rows compare directly.
+  const byHours = [...hours].sort((a, b) => b.hours - a.hours);
+  const averages = averageComparisons(results.matrix.map((x) => x.comparison), byHours.map((r) => r.id));
+  const ratingRows: ContributionRow[] = byHours.map((r, i) => ({ id: r.id, name: r.name, selfBp: averages[i].selfBp, peerBp: averages[i].peerAvgBp }));
+  const totalHours = hours.reduce((s, r) => s + r.hours, 0);
+  const scaleBp = Math.max(
+    1,
+    ...hours.map((r) => (totalHours > 0 ? Math.round((r.hours / totalHours) * 10000) : 0)),
+    ...ratingRows.flatMap((r) => [r.selfBp ?? 0, r.peerBp ?? 0]),
+  );
   const status = team.channel_status === "published" ? "Active" : team.channel_status === "finished" ? "Finished" : "Draft";
 
   return (
@@ -97,7 +108,7 @@ export default async function InstructorTeamPage({ params, searchParams }: { par
         />
 
         {tab === "overview" && (
-          <div className="grid items-start gap-4 sm:gap-6 md:grid-cols-2">
+          <div className="space-y-4 sm:space-y-6">
             {signal?.needsAttention ? (
               <Panel title="Needs attention" tone="primary" count={signal.reasons.length}>
                 {[
@@ -130,7 +141,13 @@ export default async function InstructorTeamPage({ params, searchParams }: { par
                 ]}
               </Panel>
             )}
-            <HoursPanel rows={hours} />
+            <div>
+              <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
+                <HoursPanel rows={byHours} scaleBp={scaleBp} />
+                <ContributionChart rows={ratingRows} scaleBp={scaleBp} />
+              </div>
+              <p className="mt-2 text-small text-hint">Percent of team hours next to average ratings across milestones, on the same scale.</p>
+            </div>
           </div>
         )}
 

@@ -99,3 +99,7 @@ Choices made where the build spec or the Milestone 1/2 documents were silent, am
 ## One place for to-dos (Nov 2026)
 
 53. **The dashboards no longer have a To do box; the notification bell is the one list.** Instructor next setup steps (publish, add a milestone, send invites) moved into the bell, and a milestone due today now reads "Mark ... complete" there. A complete-milestone step isn't listed twice when the milestone is already in the bell. Uploading a class list stays in the New menu.
+
+## Hours next to ratings (Nov 2026)
+
+54. **The instructor's team Overview compares hours with contribution ratings.** "Confirmed hours" and "Contribution ratings" sit side by side in the same student order and on one shared percent scale, so a student's share of team hours lines up with how they rated themselves and how teammates rated them. Self and Peers are averaged across milestones, and a missing rating is skipped rather than counted as 0. Hours aren't tied to a milestone, so this view compares totals rather than one milestone at a time; per-milestone ratings stay on the Ratings tab.

@@ -186,6 +186,21 @@ export function compareShares(ratings: ShareRating[], memberIds: number[]): Shar
   });
 }
 
+/**
+ * Each member's self rating and peer rating, averaged across milestones.
+ * A milestone only counts toward a number if that number exists for it, so a skipped rating isn't a 0.
+ */
+export function averageComparisons(perMilestone: ShareComparison[][], memberIds: number[]): { userId: number; selfBp: number | null; peerAvgBp: number | null }[] {
+  const mean = (values: (number | null | undefined)[]) => {
+    const avg = average(values.filter((v): v is number => v !== null && v !== undefined));
+    return avg === null ? null : Math.round(avg);
+  };
+  return memberIds.map((userId) => {
+    const mine = perMilestone.map((list) => list.find((c) => c.userId === userId));
+    return { userId, selfBp: mean(mine.map((c) => c?.selfBp)), peerAvgBp: mean(mine.map((c) => c?.peerAvgBp)) };
+  });
+}
+
 /** Integrity checks for percentage ratings: an even split for everyone, or two people favoring each other. */
 export function detectShareFlags(ratings: ShareRating[], memberIds: number[], names: Record<number, string> = {}): DetectedFlag[] {
   const flags: DetectedFlag[] = [];

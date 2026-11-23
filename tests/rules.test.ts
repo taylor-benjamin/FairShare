@@ -3,6 +3,7 @@ import {
   addDaysIso,
   daysUntil,
   dueLabel,
+  averageComparisons,
   compareShares,
   detectIntegrityFlags,
   detectShareFlags,
@@ -323,5 +324,21 @@ describe("next step links", () => {
     expect(nextStepHref({ kind: "complete-milestone", title: "", milestoneId: 3 }, 7)).toBe("/instructor/projects/7?tab=milestones");
     expect(nextStepHref({ kind: "invites", title: "", teamId: 4 }, 7)).toBe("/instructor/teams/4?tab=members");
     expect(nextStepHref({ kind: "invites", title: "", teamId: null }, 7)).toBe("/instructor/projects/7");
+  });
+});
+
+describe("average contribution ratings", () => {
+  const c = (userId: number, selfBp: number | null, peerAvgBp: number | null) => ({ userId, selfBp, peerAvgBp, peerCount: peerAvgBp === null ? 0 : 1, gapBp: null });
+
+  it("averages self and peer ratings across milestones", () => {
+    expect(averageComparisons([[c(1, 4000, 3000)], [c(1, 2000, 2000)]], [1])).toEqual([{ userId: 1, selfBp: 3000, peerAvgBp: 2500 }]);
+  });
+
+  it("doesn't count a skipped rating as zero", () => {
+    expect(averageComparisons([[c(1, null, 3000)], [c(1, 2000, null)], []], [1])).toEqual([{ userId: 1, selfBp: 2000, peerAvgBp: 3000 }]);
+  });
+
+  it("returns no numbers for someone with no ratings", () => {
+    expect(averageComparisons([[c(1, 5000, 5000)]], [2])).toEqual([{ userId: 2, selfBp: null, peerAvgBp: null }]);
   });
 });
