@@ -10,6 +10,8 @@ export const INTEGRITY_RULES = {
    */
   RECIPROCAL_MIN_SCORE: 4,
   RECIPROCAL_MARGIN: 1.0,
+  /** Percentage ratings: two members each give the other at least this multiple of an even share. */
+  RECIPROCAL_SHARE_MULTIPLE: 1.5,
 } as const;
 
 export const EARLY_WARNING = {

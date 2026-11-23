@@ -1,21 +1,15 @@
 import { submitRatingsAction } from "@/app/actions/team";
 import { handlePageError } from "@/components/access-denied";
 import { ActionForm, SubmitButton } from "@/components/forms";
+import { ShareSliders } from "@/components/share-sliders";
 import { Chip, EmptyState, formatDate, Notice, Page } from "@/components/ui";
 
 const headTone = { open: "", ready: "bg-primary-tint", submitted: "bg-confirmed-soft/45" } as const;
 import { requireUser } from "@/lib/auth/session";
 import { getRatingsPage } from "@/lib/services/peer-evaluation";
+import { formatShare } from "@/lib/rules";
 
 export const metadata = { title: "Peer ratings" };
-
-const SCALE = [
-  [1, "Didn't contribute"],
-  [2, "Below expectations"],
-  [3, "Met expectations"],
-  [4, "Above expectations"],
-  [5, "Outstanding"],
-] as const;
 
 export default async function RatingsPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
@@ -26,7 +20,7 @@ export default async function RatingsPage({ params }: { params: Promise<{ id: st
   } catch (e) {
     return handlePageError(e);
   }
-  const { teammates, anonymous } = data;
+  const { teammates, anonymous, sliders, members } = data;
   // Milestones waiting for your ratings come first, then the rest in their usual order.
   const readyToRate = (m: (typeof data.milestones)[number]) => m.milestone_status === "completed" && !m.submitted;
   const milestones = [...data.milestones.filter(readyToRate), ...data.milestones.filter((m) => !readyToRate(m))];
@@ -53,6 +47,19 @@ export default async function RatingsPage({ params }: { params: Promise<{ id: st
 
             {m.submitted && (
               <ul className="divide-y divide-line">
+                {m.myShares.map((r) => {
+                  const person = members.find((t) => t.user_id === r.evaluatee_id);
+                  return (
+                    <li key={r.share_id} className="flex items-center justify-between gap-3 px-4 py-3 sm:px-5">
+                      <span className="min-w-0">
+                        {person?.first_name} {person?.last_name}
+                        {r.evaluatee_id === user.userId && <span className="text-primary-dark"> (You)</span>}
+                        {person?.team_role && <span className="text-hint"> · {person.team_role}</span>}
+                      </span>
+                      <span className="shrink-0 font-semibold tabular-nums text-ink">{formatShare(r.share_bp)}</span>
+                    </li>
+                  );
+                })}
                 {m.myRatings.map((r) => {
                   const mate = teammates.find((t) => t.user_id === r.evaluatee_id);
                   return (
@@ -70,33 +77,9 @@ export default async function RatingsPage({ params }: { params: Promise<{ id: st
               </ul>
             )}
 
-            {m.milestone_status === "completed" && !m.submitted && (
+            {m.milestone_status === "completed" && !m.submitted && teammates.length > 0 && (
               <ActionForm action={submitRatingsAction.bind(null, teamId, m.milestone_id)} className="space-y-5 p-4 sm:p-5">
-                {teammates.map((t) => (
-                  <fieldset key={t.user_id} className="space-y-2">
-                    <legend className="font-semibold">
-                      {t.first_name} {t.last_name}
-                      {t.team_role && <span className="ml-1 text-small font-normal text-hint">· {t.team_role}</span>}
-                    </legend>
-                    <div className="grid grid-cols-5 gap-1.5" role="radiogroup">
-                      {SCALE.map(([n, label]) => (
-                        <label
-                          key={n}
-                          title={label}
-                          className="flex cursor-pointer flex-col items-center rounded-lg border border-line py-2 text-center hover:border-primary has-checked:border-primary has-checked:bg-primary has-checked:text-white"
-                        >
-                          <input type="radio" name={`score_${t.user_id}`} value={n} required className="sr-only" />
-                          <span className="text-body font-semibold">{n}</span>
-                          <span className="hidden text-[11px] leading-tight sm:block">{label}</span>
-                        </label>
-                      ))}
-                    </div>
-                    <label htmlFor={`comment_${t.user_id}`} className="sr-only">
-                      Comment for {t.first_name}
-                    </label>
-                    <input id={`comment_${t.user_id}`} name={`comment_${t.user_id}`} placeholder="Optional comment for your instructor" maxLength={1000} className="field-input" />
-                  </fieldset>
-                ))}
+                <ShareSliders members={sliders} />
                 <SubmitButton full pendingText="Submitting…">
                   Submit ratings
                 </SubmitButton>
@@ -119,14 +102,7 @@ export default async function RatingsPage({ params }: { params: Promise<{ id: st
               ? "Your ratings are anonymous. Teammates never see who rated them or what you gave anyone else. Only your instructor sees individual ratings."
               : "Only your instructor sees the full set of ratings. Teammates see the ratings they received, with your name."}
           </p>
-          <ul className="divide-y divide-line rounded-xl border border-line">
-            {SCALE.map(([n, label]) => (
-              <li key={n} className="flex items-center gap-3 px-3 py-2 text-small">
-                <span className="grid size-7 shrink-0 place-items-center rounded-full bg-primary-soft font-semibold text-primary-dark">{n}</span>
-                {label}
-              </li>
-            ))}
-          </ul>
+          <p className="text-small text-hint">Split 100% of the work across your team, including yourself. Moving one slider adjusts the ones you haven&apos;t set.</p>
           <p className="text-small text-hint">Ratings open when your instructor marks a milestone complete. Rate based on the work you saw, and check the team&apos;s confirmed hours on Log &amp; Verify.</p>
         </div>
       </aside>

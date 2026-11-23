@@ -113,6 +113,111 @@ export function average(nums: number[]): number | null {
   return nums.reduce((s, n) => s + n, 0) / nums.length;
 }
 
+// ── Percentage shares ────────────────────────────────────────────────────────
+// Shares are whole basis points (2500 = 25.00%), so a full split is exactly 10000.
+
+export const FULL_SHARE = 10000;
+
+export interface ShareRating {
+  evaluatorId: number;
+  evaluateeId: number;
+  shareBp: number;
+}
+
+export const formatShare = (bp: number) => `${(bp / 100).toFixed(2)}%`;
+
+/** Splits `total` in proportion to `weights`, always summing exactly. All-zero weights split evenly. */
+export function splitShares(weights: number[], total: number = FULL_SHARE): number[] {
+  if (weights.length === 0) return [];
+  const sum = weights.reduce((s, w) => s + w, 0);
+  const exact = weights.map((w) => (sum > 0 ? (w * total) / sum : total / weights.length));
+  const out = exact.map(Math.floor);
+  let left = total - out.reduce((s, n) => s + n, 0);
+  const byRemainder = exact.map((v, i) => ({ i, r: v - Math.floor(v) })).sort((a, b) => b.r - a.r || a.i - b.i);
+  for (let k = 0; left > 0; k = (k + 1) % byRemainder.length, left--) out[byRemainder[k].i]++;
+  return out;
+}
+
+/**
+ * Moves one slider and keeps the total at 100%. Sliders not yet touched absorb the change, so values
+ * the rater already set stay put. If those can't cover it, every other slider scales.
+ */
+export function rebalanceShares(shares: number[], index: number, value: number, touched: boolean[]): number[] {
+  if (shares.length < 2) return [FULL_SHARE];
+  const target = Math.min(FULL_SHARE, Math.max(0, Math.round(value)));
+  const rest = FULL_SHARE - target;
+  const others = shares.map((_, i) => i).filter((i) => i !== index);
+  const free = others.filter((i) => !touched[i]);
+  const setSum = others.filter((i) => touched[i]).reduce((s, i) => s + shares[i], 0);
+  const adjust = free.length > 0 && setSum <= rest ? free : others;
+  const budget = adjust === free ? rest - setSum : rest;
+  const next = [...shares];
+  next[index] = target;
+  splitShares(adjust.map((i) => shares[i]), budget).forEach((v, k) => (next[adjust[k]] = v));
+  return next;
+}
+
+/** Reads "33.33" as 3333 basis points. Null unless it's 0 to 100 with at most 2 decimals. */
+export function parseSharePercent(raw: string): number | null {
+  const s = raw.trim();
+  if (!/^\d{1,3}(\.\d{1,2})?$/.test(s)) return null;
+  const bp = Math.round(Number(s) * 100);
+  return bp <= FULL_SHARE ? bp : null;
+}
+
+export interface ShareComparison {
+  userId: number;
+  selfBp: number | null;
+  peerAvgBp: number | null;
+  peerCount: number;
+  /** Self rating minus the teammates' average, in basis points. Positive means they rated themselves higher. */
+  gapBp: number | null;
+}
+
+/** How each member rated themselves next to how their teammates rated them, for one milestone. */
+export function compareShares(ratings: ShareRating[], memberIds: number[]): ShareComparison[] {
+  return memberIds.map((userId) => {
+    const received = ratings.filter((r) => r.evaluateeId === userId);
+    const selfBp = received.find((r) => r.evaluatorId === userId)?.shareBp ?? null;
+    const peers = received.filter((r) => r.evaluatorId !== userId).map((r) => r.shareBp);
+    const avg = average(peers);
+    const peerAvgBp = avg === null ? null : Math.round(avg);
+    return { userId, selfBp, peerAvgBp, peerCount: peers.length, gapBp: selfBp === null || peerAvgBp === null ? null : selfBp - peerAvgBp };
+  });
+}
+
+/** Integrity checks for percentage ratings: an even split for everyone, or two people favoring each other. */
+export function detectShareFlags(ratings: ShareRating[], memberIds: number[], names: Record<number, string> = {}): DetectedFlag[] {
+  const flags: DetectedFlag[] = [];
+  const name = (id: number) => names[id] ?? `Member ${id}`;
+  if (memberIds.length < 2) return flags;
+
+  for (const raterId of memberIds) {
+    const given = ratings.filter((r) => r.evaluatorId === raterId && memberIds.includes(r.evaluateeId));
+    if (given.length !== memberIds.length || given.length <= INTEGRITY_RULES.IDENTICAL_MIN_RATINGS) continue;
+    const values = given.map((g) => g.shareBp);
+    // A 1 basis point difference is only rounding: 33.34, 33.33, 33.33 is an even split.
+    if (Math.max(...values) - Math.min(...values) <= 1) {
+      flags.push({ raterId, type: "identical_scores", details: `${name(raterId)} split the work evenly across all ${given.length} members.` });
+    }
+  }
+
+  const threshold = (FULL_SHARE / memberIds.length) * INTEGRITY_RULES.RECIPROCAL_SHARE_MULTIPLE;
+  for (let i = 0; i < memberIds.length; i++) {
+    for (let j = i + 1; j < memberIds.length; j++) {
+      const [a, b] = [memberIds[i], memberIds[j]];
+      const ab = ratings.find((r) => r.evaluatorId === a && r.evaluateeId === b);
+      const ba = ratings.find((r) => r.evaluatorId === b && r.evaluateeId === a);
+      if (ab && ba && ab.shareBp >= threshold && ba.shareBp >= threshold) {
+        const details = `${name(a)} and ${name(b)} gave each other ${formatShare(ab.shareBp)} and ${formatShare(ba.shareBp)}; an even share is ${formatShare(FULL_SHARE / memberIds.length)}.`;
+        flags.push({ raterId: a, type: "reciprocal_scores", details });
+        flags.push({ raterId: b, type: "reciprocal_scores", details });
+      }
+    }
+  }
+  return flags;
+}
+
 // ── Early warning ────────────────────────────────────────────────────────────
 
 export interface MemberActivity {

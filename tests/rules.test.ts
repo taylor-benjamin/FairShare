@@ -3,7 +3,12 @@ import {
   addDaysIso,
   daysUntil,
   dueLabel,
+  compareShares,
   detectIntegrityFlags,
+  detectShareFlags,
+  parseSharePercent,
+  rebalanceShares,
+  splitShares,
   groupRosterByTeam,
   inactiveMembers,
   allAgreed,
@@ -252,5 +257,60 @@ describe("due dates for notifications", () => {
     expect(dueLabel("2026-11-19", "2026-11-19")).toBe("Due today");
     expect(dueLabel("2026-11-20", "2026-11-19")).toBe("Due tomorrow");
     expect(dueLabel("2026-11-26", "2026-11-19")).toBe("Due in 7 days");
+  });
+});
+
+describe("percentage shares", () => {
+  const sum = (a: number[]) => a.reduce((s, n) => s + n, 0);
+
+  it("splits evenly and always totals exactly 100%", () => {
+    expect(splitShares([1, 1, 1])).toEqual([3334, 3333, 3333]);
+    expect(splitShares([0, 0])).toEqual([5000, 5000]);
+    for (const n of [2, 3, 4, 5, 6, 7, 9]) expect(sum(splitShares(Array(n).fill(1)))).toBe(10000);
+  });
+
+  it("reads percentages to two decimals and rejects anything else", () => {
+    expect(parseSharePercent("33.33")).toBe(3333);
+    expect(parseSharePercent("100")).toBe(10000);
+    expect(parseSharePercent("0")).toBe(0);
+    expect(parseSharePercent("4.35")).toBe(435);
+    for (const bad of ["100.01", "12.345", "-1", "abc", "", "1e2"]) expect(parseSharePercent(bad)).toBeNull();
+  });
+
+  it("keeps sliders you already set when another moves", () => {
+    const next = rebalanceShares([4000, 2000, 2000, 2000], 1, 3000, [true, false, false, false]);
+    expect(next[0]).toBe(4000);
+    expect(next[1]).toBe(3000);
+    expect(sum(next)).toBe(10000);
+  });
+
+  it("scales set sliders only when the untouched ones can't cover the change", () => {
+    const next = rebalanceShares([6000, 2000, 2000], 1, 9000, [true, false, false]);
+    expect(next[1]).toBe(9000);
+    expect(sum(next)).toBe(10000);
+  });
+
+  it("compares a self rating with the teammates' average", () => {
+    const rows = [
+      { evaluatorId: 1, evaluateeId: 1, shareBp: 5000 },
+      { evaluatorId: 2, evaluateeId: 1, shareBp: 3000 },
+      { evaluatorId: 3, evaluateeId: 1, shareBp: 2000 },
+    ];
+    expect(compareShares(rows, [1])[0]).toEqual({ userId: 1, selfBp: 5000, peerAvgBp: 2500, peerCount: 2, gapBp: 2500 });
+  });
+
+  it("flags an even split, allowing for rounding", () => {
+    const rows = [3334, 3333, 3333].map((shareBp, i) => ({ evaluatorId: 1, evaluateeId: i + 1, shareBp }));
+    expect(detectShareFlags(rows, [1, 2, 3]).map((f) => f.type)).toEqual(["identical_scores"]);
+  });
+
+  it("flags two members who give each other far more than an even share", () => {
+    const rows = [
+      { evaluatorId: 1, evaluateeId: 2, shareBp: 4000 },
+      { evaluatorId: 2, evaluateeId: 1, shareBp: 4000 },
+      { evaluatorId: 3, evaluateeId: 1, shareBp: 2500 },
+    ];
+    const flags = detectShareFlags(rows, [1, 2, 3, 4]).filter((f) => f.type === "reciprocal_scores");
+    expect(flags.map((f) => f.raterId)).toEqual([1, 2]);
   });
 });

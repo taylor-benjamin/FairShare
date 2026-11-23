@@ -15,6 +15,7 @@ import { requireUser } from "@/lib/auth/session";
 import { getTeamRoster } from "@/lib/services/class-setup";
 import { getChannel } from "@/lib/services/contribution-service";
 import { teamRatings } from "@/lib/services/peer-evaluation";
+import { formatShare } from "@/lib/rules";
 import { getTaskHistory, teamSignals } from "@/lib/services/team-health";
 import { TaskHistoryList } from "@/components/task-history";
 
@@ -208,7 +209,7 @@ export default async function InstructorTeamPage({ params, searchParams }: { par
 
         {tab === "ratings" && (
           <>
-            <p className="mb-3 text-small text-hint">Only you can see who gave which rating. Open a student to see the ratings they gave.</p>
+            <p className="mb-3 text-small text-hint">Self is the share of the work students gave themselves. Peers is the average their teammates gave them. Gap is Self minus Peers.</p>
             {results.matrix.length === 0 ? (
               <EmptyState title="No completed milestones yet">
                 Ratings open when you{" "}
@@ -218,6 +219,42 @@ export default async function InstructorTeamPage({ params, searchParams }: { par
                 .
               </EmptyState>
             ) : (
+              <>
+              {results.matrix.some((x) => x.comparison.length > 0) && (
+                <div className="mb-4 grid items-start gap-3 md:grid-cols-2">
+                  {results.matrix
+                    .filter((x) => x.comparison.length > 0)
+                    .map(({ milestone, comparison }) => (
+                      <section key={milestone.milestone_id} className="card overflow-hidden">
+                        <div className="card-head bg-secondary-tint">
+                          <h3 className="font-semibold">{milestone.milestone_name}</h3>
+                        </div>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-small">
+                            <thead>
+                              <tr className="text-left text-hint">
+                                <th scope="col" className="px-4 py-2 font-medium">Student</th>
+                                <th scope="col" className="px-2 py-2 text-right font-medium">Self</th>
+                                <th scope="col" className="px-2 py-2 text-right font-medium">Peers</th>
+                                <th scope="col" className="px-4 py-2 text-right font-medium">Gap</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-line">
+                              {comparison.map((c) => (
+                                <tr key={c.userId}>
+                                  <th scope="row" className="px-4 py-2 text-left font-normal">{c.name}</th>
+                                  <td className="px-2 py-2 text-right tabular-nums">{c.selfBp === null ? "None" : formatShare(c.selfBp)}</td>
+                                  <td className="px-2 py-2 text-right tabular-nums">{c.peerAvgBp === null ? "None" : formatShare(c.peerAvgBp)}</td>
+                                  <td className="px-4 py-2 text-right font-semibold tabular-nums">{c.gapBp === null ? "None" : `${c.gapBp > 0 ? "+" : ""}${(c.gapBp / 100).toFixed(2)}`}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </section>
+                    ))}
+                </div>
+              )}
               <ul className="grid items-start gap-3 md:grid-cols-2">
                 {members.map((m) => {
                   const given = results.matrix.map(({ milestone, ratings }) => ({ milestone, ratings: ratings.filter((r) => r.fromId === m.user_id) }));
@@ -251,7 +288,7 @@ export default async function InstructorTeamPage({ params, searchParams }: { par
                                     <li key={r.toId} className="py-2">
                                       <div className="flex justify-between gap-2">
                                         <span>{r.to}</span>
-                                        <span className="font-semibold">{r.score}/5</span>
+                                        <span className="font-semibold tabular-nums">{r.shareBp !== null ? formatShare(r.shareBp) : `${r.score}/5`}</span>
                                       </div>
                                       {r.comment && <p className="text-hint">“{r.comment}”</p>}
                                     </li>
@@ -266,6 +303,7 @@ export default async function InstructorTeamPage({ params, searchParams }: { par
                   );
                 })}
               </ul>
+              </>
             )}
           </>
         )}

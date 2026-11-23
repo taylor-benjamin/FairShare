@@ -2,7 +2,7 @@
 // Every account in a copy has an email like first.last+<workspace>@fairshare.demo, which keeps copies apart.
 // The inactive, disputed and flagged scenarios all sit on one chosen student so no one else is shown that way.
 import { DEMO_DOMAIN, DEMO_LOGINS, DEMO_PLACEHOLDER_ROSTER, type DemoMember, type DemoRoster, type DemoTeam } from "../config/demo-class";
-import { detectIntegrityFlags } from "./rules";
+import { detectShareFlags, splitShares, type ShareRating } from "./rules";
 
 const WORKSPACE_EMAIL = /\+([a-f0-9]{8})@fairshare\.demo$/i;
 const DAY = 24 * 60 * 60 * 1000;
@@ -344,27 +344,28 @@ export function buildDemoClass(workspace: string, base: number, nowMs: number, r
     const isReviewTeam = team.name === roster.scenarios.reviewTeam;
     const flagged = isReviewTeam ? idOf(memberNamed(team, roster.scenarios.reviewMember)!) : -1;
     const unrated = isReviewTeam ? idOf(memberNamed(team, roster.scenarios.defaultStudent)!) : -1;
-    const ratings: { evaluatorId: number; evaluateeId: number; score: number }[] = [];
+    const ratings: ShareRating[] = [];
     memberIds.forEach((rater, i) => {
       if (rater === unrated) return; // The default student's ratings are left for the visitor to submit.
+      // The flagged student splits evenly. Everyone else weighs the flagged student low.
+      const weights = memberIds.map((ratee, j) => (rater === flagged ? 1 : ratee === flagged ? 2 : ratee === rater ? 5 : 4 + ((i + j) % 2)));
+      const split = splitShares(weights);
       memberIds.forEach((ratee, j) => {
-        if (rater === ratee) return;
-        const score = rater === flagged ? 5 : ratee === flagged ? 2 : 4 + ((i + j) % 2);
-        ratings.push({ evaluatorId: rater, evaluateeId: ratee, score });
-        add("evaluations", {
-          evaluation_id: next("evaluations"),
+        ratings.push({ evaluatorId: rater, evaluateeId: ratee, shareBp: split[j] });
+        add("contribution_shares", {
+          share_id: next("contribution_shares"),
           milestone_id: milestone1,
           team_id: teamId,
           evaluator_id: rater,
           evaluatee_id: ratee,
-          score,
-          comment: score === 5 && rater !== flagged ? "Reliable and easy to work with." : null,
+          share_bp: split[j],
+          comment: weights[j] === 5 && rater !== ratee ? "Reliable and easy to work with." : null,
           submission_date: at(26),
         });
       });
     });
     const names = Object.fromEntries(team.members.map((m) => [uid(m.first, m.last), key(m as DemoMember)]));
-    for (const f of detectIntegrityFlags(ratings, memberIds, names)) {
+    for (const f of detectShareFlags(ratings, memberIds, names)) {
       add("integrity_flags", {
         flag_id: next("integrity_flags"),
         milestone_id: milestone1,
@@ -394,6 +395,7 @@ export function buildDemoClass(workspace: string, base: number, nowMs: number, r
     "verifications",
     "disputes",
     "evaluations",
+    "contribution_shares",
     "integrity_flags",
   ].map((table) => ({ table, rows: rows[table] ?? [] }));
 }

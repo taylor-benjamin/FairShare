@@ -6,6 +6,7 @@ import { addTask, answerDeleteRequest, cancelDeleteRequest, deleteTask, logContr
 import { submitRatings } from "@/lib/services/peer-evaluation";
 import { agreeToCharter, reassignTask, reopenCharter, saveCharterText, saveMyRole } from "@/lib/services/team-health";
 import { UserError } from "@/lib/services/common";
+import { parseSharePercent } from "@/lib/rules";
 import type { ActionState } from "@/lib/action-state";
 import type { TaskStatus } from "@/lib/types";
 import { attempt, int, str, toActionError } from "./helpers";
@@ -138,15 +139,15 @@ export async function saveRoleAction(teamId: number, _: ActionState, fd: FormDat
   });
 }
 
-/** P15 — rate every teammate for a completed milestone. */
+/** P15: split a completed milestone's work across the whole team, including yourself. */
 export async function submitRatingsAction(teamId: number, milestoneId: number, _: ActionState, fd: FormData): Promise<ActionState> {
   return attempt(async () => {
-    const ratings: { evaluateeId: number; score: number; comment: string | null }[] = [];
+    const ratings: { evaluateeId: number; shareBp: number | null; comment: string | null }[] = [];
     for (const [k, v] of fd.entries()) {
-      const m = /^score_(\d+)$/.exec(k);
-      if (m) ratings.push({ evaluateeId: Number(m[1]), score: Number(v), comment: str(fd, `comment_${m[1]}`, 1000) || null });
+      const m = /^share_(\d+)$/.exec(k);
+      if (m) ratings.push({ evaluateeId: Number(m[1]), shareBp: typeof v === "string" ? parseSharePercent(v) : null, comment: str(fd, `comment_${m[1]}`, 1000) || null });
     }
-    if (ratings.length === 0) throw new UserError("Rate every teammate from 1 to 5 before submitting.");
+    if (ratings.length === 0) throw new UserError("Rate everyone before submitting.");
     await submitRatings(await getCurrentUser(), teamId, milestoneId, ratings);
     revalidatePath(`/teams/${teamId}/ratings`);
     return "Ratings submitted.";

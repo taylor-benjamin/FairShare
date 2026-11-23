@@ -6,6 +6,7 @@ import type {
   AccessLevel,
   CharterRow,
   ContributionRow,
+  ContributionShareRow,
   CourseRow,
   DisputeRow,
   EvaluationRow,
@@ -269,6 +270,7 @@ function teamDeleteStatements(teamIds: string, params: unknown[]) {
   return [
     stmt(`DELETE FROM integrity_flags WHERE team_id IN (${teamIds})`, ...params),
     stmt(`DELETE FROM evaluations WHERE team_id IN (${teamIds})`, ...params),
+    stmt(`DELETE FROM contribution_shares WHERE team_id IN (${teamIds})`, ...params),
     stmt(`DELETE FROM disputes WHERE verification_id IN (SELECT verification_id FROM verifications WHERE contribution_id IN (${contribs}))`, ...params),
     stmt(`DELETE FROM verifications WHERE contribution_id IN (${contribs})`, ...params),
     stmt(`DELETE FROM contributions WHERE team_id IN (${teamIds})`, ...params),
@@ -293,6 +295,7 @@ export async function deleteProject(projectId: number): Promise<void> {
     // Flags/evaluations are tied to teams too, but clear any stragglers tied only to this project's milestones.
     stmt("DELETE FROM integrity_flags WHERE milestone_id IN (SELECT milestone_id FROM milestones WHERE project_id = ?)", projectId),
     stmt("DELETE FROM evaluations WHERE milestone_id IN (SELECT milestone_id FROM milestones WHERE project_id = ?)", projectId),
+    stmt("DELETE FROM contribution_shares WHERE milestone_id IN (SELECT milestone_id FROM milestones WHERE project_id = ?)", projectId),
     stmt("DELETE FROM milestones WHERE project_id = ?", projectId),
     stmt("DELETE FROM projects WHERE project_id = ?", projectId),
   ]);
@@ -716,6 +719,38 @@ export const evaluations = {
   },
 };
 
+export const contributionShares = {
+  byTeamMilestone: (teamId: number, milestoneId: number) =>
+    all<ContributionShareRow>("SELECT * FROM contribution_shares WHERE team_id = ? AND milestone_id = ?", teamId, milestoneId),
+  byTeamCompleted: (teamId: number) =>
+    all<ContributionShareRow & { milestone_name: string; due_date: string; evaluator_first: string; evaluator_last: string }>(
+      `SELECT s.*, ms.milestone_name, ms.due_date, u.first_name AS evaluator_first, u.last_name AS evaluator_last
+       FROM contribution_shares s JOIN milestones ms ON ms.milestone_id = s.milestone_id JOIN users u ON u.user_id = s.evaluator_id
+       WHERE s.team_id = ? AND ms.milestone_status = 'completed' ORDER BY ms.due_date, s.submission_date`,
+      teamId,
+    ),
+  givenBy: (teamId: number, evaluatorId: number) =>
+    all<ContributionShareRow>("SELECT * FROM contribution_shares WHERE team_id = ? AND evaluator_id = ?", teamId, evaluatorId),
+  /** Saves one rater's full split for a milestone atomically. */
+  saveSet: (milestoneId: number, teamId: number, evaluatorId: number, shares: { evaluateeId: number; shareBp: number; comment: string | null }[]) => {
+    const ts = now();
+    return batch(
+      shares.map((s) =>
+        stmt(
+          `INSERT INTO contribution_shares (milestone_id, team_id, evaluator_id, evaluatee_id, share_bp, comment, submission_date) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          milestoneId,
+          teamId,
+          evaluatorId,
+          s.evaluateeId,
+          s.shareBp,
+          s.comment,
+          ts,
+        ),
+      ),
+    );
+  },
+};
+
 export type FlagWithNames = FlagRow & {
   rater_name: string;
   team_name: string;
@@ -833,7 +868,9 @@ export const studentDashboard = {
        WHERE m.user_id = ? AND m.access_level = 'write'
          AND (SELECT COUNT(*) FROM team_memberships m2 WHERE m2.team_id = t.team_id) > 1
          AND NOT EXISTS (SELECT 1 FROM evaluations e WHERE e.milestone_id = ms.milestone_id AND e.team_id = t.team_id AND e.evaluator_id = ?)
+         AND NOT EXISTS (SELECT 1 FROM contribution_shares s WHERE s.milestone_id = ms.milestone_id AND s.team_id = t.team_id AND s.evaluator_id = ?)
        ORDER BY ms.due_date`,
+      userId,
       userId,
       userId,
     ),

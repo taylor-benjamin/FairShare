@@ -112,6 +112,13 @@ describe("demo class data", () => {
 
   it("leaves the default student's Milestone 1 ratings for the visitor", () => {
     const student = users.find((u) => `${u.first_name} ${u.last_name}` === ROSTER.scenarios.defaultStudent)!.user_id;
-    expect(table(data, "evaluations").some((e) => e.evaluator_id === student)).toBe(false);
+    expect(table(data, "contribution_shares").some((e) => e.evaluator_id === student)).toBe(false);
+  });
+
+  it("gives every rater's split a total of exactly 100%", () => {
+    const totals = new Map<unknown, number>();
+    for (const s of table(data, "contribution_shares")) totals.set(s.evaluator_id, (totals.get(s.evaluator_id) ?? 0) + Number(s.share_bp));
+    expect(totals.size).toBeGreaterThan(0);
+    for (const total of totals.values()) expect(total).toBe(10000);
   });
 });

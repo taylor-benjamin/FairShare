@@ -170,6 +170,18 @@ export interface EvaluationRow {
   submission_date: string;
 }
 
+/** One person's percentage of a milestone's work, as judged by one rater. 2500 = 25.00%. */
+export interface ContributionShareRow {
+  share_id: number;
+  milestone_id: number;
+  team_id: number;
+  evaluator_id: number;
+  evaluatee_id: number;
+  share_bp: number;
+  comment: string | null;
+  submission_date: string;
+}
+
 export interface FlagRow {
   flag_id: number;
   milestone_id: number;

@@ -7,7 +7,7 @@
 
 import { writeFileSync } from "node:fs";
 import { hashPassword } from "../src/lib/auth/crypto";
-import { detectIntegrityFlags } from "../src/lib/rules";
+import { detectShareFlags, splitShares, type ShareRating } from "../src/lib/rules";
 
 export const DEMO_PASSWORD = "FairShare2026!";
 
@@ -67,6 +67,7 @@ async function main() {
   // Clear demo data (children first). project_templates is part of the migration and stays.
   for (const t of [
     "integrity_flags",
+    "contribution_shares",
     "evaluations",
     "disputes",
     "verifications",
@@ -366,16 +367,22 @@ async function main() {
   const report: string[] = [];
   for (const [teamIdStr, list] of Object.entries(ratings)) {
     const teamId = Number(teamIdStr);
-    for (const [from, to, score, comment] of list) {
-      insert("evaluations", { evaluation_id: eId++, milestone_id: 1, team_id: teamId, evaluator_id: P[from].id, evaluatee_id: P[to].id, score, comment, submission_date: at(26) });
-    }
     const team = TEAMS.find((t) => t.id === teamId)!;
+    // The 1 to 5 scores above become each rater's percentage split. Self weight matches their top score,
+    // so Devon's all 5s stay an even split and still raise the flag.
+    const shares: ShareRating[] = [];
+    for (const rater of team.members) {
+      const given = list.filter(([from]) => from === rater);
+      const selfWeight = Math.max(...given.map(([, , score]) => score));
+      const people = [{ to: rater, weight: selfWeight, comment: null as string | null }, ...given.map(([, to, score, comment]) => ({ to, weight: score, comment }))];
+      const split = splitShares(people.map((p) => p.weight));
+      people.forEach((p, i) => {
+        shares.push({ evaluatorId: P[rater].id, evaluateeId: P[p.to].id, shareBp: split[i] });
+        insert("contribution_shares", { share_id: eId++, milestone_id: 1, team_id: teamId, evaluator_id: P[rater].id, evaluatee_id: P[p.to].id, share_bp: split[i], comment: p.comment, submission_date: at(26) });
+      });
+    }
     const names = Object.fromEntries(team.members.map((k) => [P[k].id, `${P[k].first} ${P[k].last}`]));
-    const found = detectIntegrityFlags(
-      list.map(([from, to, score]) => ({ evaluatorId: P[from].id, evaluateeId: P[to].id, score })),
-      team.members.map((k) => P[k].id),
-      names,
-    );
+    const found = detectShareFlags(shares, team.members.map((k) => P[k].id), names);
     for (const f of found) {
       insert("integrity_flags", { flag_id: fId++, milestone_id: 1, team_id: teamId, rater_id: f.raterId, flag_type: f.type, flag_details: f.details, review_status: "open", flagged_date: at(26) });
       report.push(`  flag: ${team.name} — ${f.details}`);
