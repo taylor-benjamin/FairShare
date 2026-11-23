@@ -21,7 +21,7 @@ import { TaskHistoryList } from "@/components/task-history";
 
 export const metadata = { title: "Team" };
 
-const TABS = ["overview", "members", "ratings", "tasks", "settings"] as const;
+const TABS = ["overview", "members", "ratings", "history", "settings"] as const;
 const feedFilters = [
   { value: "all", label: "All entries" },
   { value: "pending", label: "Waiting" },
@@ -34,7 +34,7 @@ export default async function InstructorTeamPage({ params, searchParams }: { par
   const user = await requireUser(["instructor"]);
   const teamId = Number((await params).id);
   const sp = await searchParams;
-  const tabParam = sp.tab;
+  const tabParam = sp.tab === "tasks" ? "history" : sp.tab; // Old links to the Tasks tab still work.
   const tab: Tab = TABS.includes(tabParam as Tab) ? (tabParam as Tab) : "overview";
   let channel, results, history, signal, roster;
   try {
@@ -91,59 +91,46 @@ export default async function InstructorTeamPage({ params, searchParams }: { par
             { key: "overview", label: "Overview" },
             { key: "members", label: "Members", count: roster.members.length + roster.pending.length },
             { key: "ratings", label: "Ratings" },
-            { key: "tasks", label: "Tasks", count: tasks.length },
+            { key: "history", label: "History", count: feed.length + history.length },
             { key: "settings", label: "Settings" },
           ]}
         />
 
         {tab === "overview" && (
-          <div className="grid items-start gap-4 sm:gap-6 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
-            <div className="space-y-4 sm:space-y-6">
-              {signal?.needsAttention ? (
-                <Panel title="Needs attention" tone="primary" count={signal.reasons.length}>
-                  {[
-                    ...signal.reasons.map((r) => (
-                      <li key={r} className="flex items-start gap-2.5 px-4 py-3 sm:px-5">
-                        <span aria-hidden className="mt-2 size-1.5 shrink-0 rounded-full bg-primary" />
-                        {r}
-                      </li>
-                    )),
-                    <li key="actions" className="flex flex-wrap gap-x-4 gap-y-1 px-4 py-3 sm:px-5">
-                      {(signal.openDisputes > 0 || signal.openFlags > 0) && (
-                        <Link href="/instructor/reviews" className="link inline-flex items-center gap-1 text-small">
-                          Review disputes and flags <ArrowIcon />
-                        </Link>
-                      )}
-                      {signal.inactive.length > 0 && (
-                        <Link href={`${href}?tab=tasks`} className="link inline-flex items-center gap-1 text-small">
-                          Reassign a task <ArrowIcon />
-                        </Link>
-                      )}
+          <div className="grid items-start gap-4 sm:gap-6 md:grid-cols-2">
+            {signal?.needsAttention ? (
+              <Panel title="Needs attention" tone="primary" count={signal.reasons.length}>
+                {[
+                  ...signal.reasons.map((r) => (
+                    <li key={r} className="flex items-start gap-2.5 px-4 py-3 sm:px-5">
+                      <span aria-hidden className="mt-2 size-1.5 shrink-0 rounded-full bg-primary" />
+                      {r}
                     </li>
-                  ]}
-                </Panel>
-              ) : (
-                <Panel title="On track" tone="confirmed">
-                  {[
-                    <li key="ok" className="px-4 py-3 text-small text-hint sm:px-5">
-                      No warnings: everyone is logging work and there are no open disputes or flags.
-                    </li>,
-                  ]}
-                </Panel>
-              )}
-              <HoursPanel rows={hours} />
-            </div>
-
-            <Panel
-              title="Work log"
-              count={feed.length}
-              action={<UrlSelect name="show" value={show} options={feedFilters} label="Show" />}
-              empty={feed.length === 0 ? "Nothing logged yet." : "Nothing matches this filter."}
-            >
-              {shown.map((c) => (
-                <ActivityRow key={c.contribution_id} c={{ ...c, canVerify: false }} />
-              ))}
-            </Panel>
+                  )),
+                  <li key="actions" className="flex flex-wrap gap-x-4 gap-y-1 px-4 py-3 sm:px-5">
+                    {(signal.openDisputes > 0 || signal.openFlags > 0) && (
+                      <Link href="/instructor/reviews" className="link inline-flex items-center gap-1 text-small">
+                        Review disputes and flags <ArrowIcon />
+                      </Link>
+                    )}
+                    {signal.inactive.length > 0 && (
+                      <Link href={`${href}?tab=history`} className="link inline-flex items-center gap-1 text-small">
+                        Reassign a task <ArrowIcon />
+                      </Link>
+                    )}
+                  </li>,
+                ]}
+              </Panel>
+            ) : (
+              <Panel title="On track" tone="confirmed">
+                {[
+                  <li key="ok" className="px-4 py-3 text-small text-hint sm:px-5">
+                    No warnings: everyone is logging work and there are no open disputes or flags.
+                  </li>,
+                ]}
+              </Panel>
+            )}
+            <HoursPanel rows={hours} />
           </div>
         )}
 
@@ -308,60 +295,73 @@ export default async function InstructorTeamPage({ params, searchParams }: { par
           </>
         )}
 
-        {tab === "tasks" && (
-          <div className="grid items-start gap-4 sm:gap-6 md:grid-cols-2">
-            <section className="card">
-              <div className="card-head rounded-t-(--radius-card) bg-primary-tint">
-                <h2 className="flex items-center gap-2">
-                  <span aria-hidden className="size-2 rounded-full bg-primary" />
-                  Reassign a task
-                </h2>
-              </div>
-              <div className="p-4 sm:p-5">
-                <p className="mb-4 text-small text-hint">After meeting the team, record who takes over. Future work on the task counts for the new owner.</p>
-                {assignedTasks.length === 0 ? (
-                  <p className="text-hint">The team hasn&apos;t assigned any tasks yet.</p>
-                ) : (
-                  <ActionForm action={reassignAction.bind(null, teamId)} resetOnSuccess className="space-y-3">
-                    <Field label="Task" htmlFor="taskId">
-                      <select id="taskId" name="taskId" className="field-input">
-                        {assignedTasks.map((t) => (
-                          <option key={t.task_id} value={t.task_id}>
-                            {t.task_title} ({t.owner_first} {t.owner_last})
-                          </option>
-                        ))}
-                      </select>
-                    </Field>
-                    <Field label="Give it to" htmlFor="toUserId">
-                      <select id="toUserId" name="toUserId" className="field-input">
-                        {members.map((m) => (
-                          <option key={m.user_id} value={m.user_id}>
-                            {m.first_name} {m.last_name}
-                          </option>
-                        ))}
-                      </select>
-                    </Field>
-                    <Field label="Reason" htmlFor="reason">
-                      <input id="reason" name="reason" maxLength={255} placeholder="The team sees this, e.g. agreed in office hours" className="field-input" />
-                    </Field>
-                    <SubmitButton full pendingText="Saving…">
-                      Record reassignment
-                    </SubmitButton>
-                  </ActionForm>
-                )}
-              </div>
-            </section>
-            <section className="card overflow-hidden">
-              <div className="card-head">
-                <h2 className="flex items-center gap-2">
-                  Task history
-                  {history.length > 0 && <span className="rounded-full bg-wash px-2 py-0.5 text-small font-normal text-hint">{history.length}</span>}
-                </h2>
-              </div>
-              <div className="p-4 sm:p-5">
-                {history.length === 0 ? <p className="text-center text-hint">No reassignments or deleted tasks yet.</p> : <TaskHistoryList items={history} viewer="instructor" />}
-              </div>
-            </section>
+        {tab === "history" && (
+          <div className="grid items-start gap-4 sm:gap-6 md:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+            <Panel
+              title="Work log"
+              count={feed.length}
+              action={<UrlSelect name="show" value={show} options={feedFilters} label="Show" keep={{ tab: "history" }} />}
+              empty={feed.length === 0 ? "Nothing logged yet." : "Nothing matches this filter."}
+            >
+              {shown.map((c) => (
+                <ActivityRow key={c.contribution_id} c={{ ...c, canVerify: false }} />
+              ))}
+            </Panel>
+
+            <div className="space-y-4 sm:space-y-6">
+              <section className="card overflow-hidden">
+                <div className="card-head">
+                  <h2 className="flex items-center gap-2">
+                    Task history
+                    {history.length > 0 && <span className="rounded-full bg-wash px-2 py-0.5 text-small font-normal text-hint">{history.length}</span>}
+                  </h2>
+                </div>
+                <div className="p-4 sm:p-5">
+                  {history.length === 0 ? <p className="text-center text-hint">No reassignments or deleted tasks yet.</p> : <TaskHistoryList items={history} viewer="instructor" />}
+                </div>
+              </section>
+              <section className="card">
+                <div className="card-head rounded-t-(--radius-card) bg-primary-tint">
+                  <h2 className="flex items-center gap-2">
+                    <span aria-hidden className="size-2 rounded-full bg-primary" />
+                    Reassign a task
+                  </h2>
+                </div>
+                <div className="p-4 sm:p-5">
+                  <p className="mb-4 text-small text-hint">After meeting the team, record who takes over. Future work on the task counts for the new owner.</p>
+                  {assignedTasks.length === 0 ? (
+                    <p className="text-hint">The team hasn&apos;t assigned any tasks yet.</p>
+                  ) : (
+                    <ActionForm action={reassignAction.bind(null, teamId)} resetOnSuccess className="space-y-3">
+                      <Field label="Task" htmlFor="taskId">
+                        <select id="taskId" name="taskId" className="field-input">
+                          {assignedTasks.map((t) => (
+                            <option key={t.task_id} value={t.task_id}>
+                              {t.task_title} ({t.owner_first} {t.owner_last})
+                            </option>
+                          ))}
+                        </select>
+                      </Field>
+                      <Field label="Give it to" htmlFor="toUserId">
+                        <select id="toUserId" name="toUserId" className="field-input">
+                          {members.map((m) => (
+                            <option key={m.user_id} value={m.user_id}>
+                              {m.first_name} {m.last_name}
+                            </option>
+                          ))}
+                        </select>
+                      </Field>
+                      <Field label="Reason" htmlFor="reason">
+                        <input id="reason" name="reason" maxLength={255} placeholder="The team sees this, e.g. agreed in office hours" className="field-input" />
+                      </Field>
+                      <SubmitButton full pendingText="Saving…">
+                        Record reassignment
+                      </SubmitButton>
+                    </ActionForm>
+                  )}
+                </div>
+              </section>
+            </div>
           </div>
         )}
 
