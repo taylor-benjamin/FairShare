@@ -21,7 +21,7 @@ export default async function FeedbackPage({ params }: { params: Promise<{ id: s
   const avgSelf = average(compared.map((m) => m.selfBp!));
   const avgPeers = average(compared.map((m) => m.peerAvgBp!));
   const pct = (bp: number | null) => (bp === null ? "None" : formatShare(bp));
-  const gap = (bp: number) => `${bp > 0 ? "+" : ""}${(bp / 100).toFixed(2)} pts`;
+  const gap = (bp: number | null) => (bp === null ? "None" : `${bp > 0 ? "+" : ""}${formatShare(bp)}`);
 
   return (
     <Page>
@@ -39,11 +39,8 @@ export default async function FeedbackPage({ params }: { params: Promise<{ id: s
         <Panel title="You vs. teammates" tone="secondary" count={shareMilestones.length} empty="Ratings appear after your instructor completes a milestone and your teammates submit them.">
           {shareMilestones.map((m) => (
             <li key={m.milestoneId} className="px-4 py-3 sm:px-5">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="font-semibold">{m.milestone}</span>
-                {m.gapBp !== null && <span className="text-small text-hint tabular-nums">{gap(m.gapBp)}</span>}
-              </div>
-              <dl className="mt-2 grid grid-cols-2 gap-3 text-small">
+              <p className="font-semibold">{m.milestone}</p>
+              <dl className="mt-2 grid grid-cols-3 gap-3 text-small">
                 <div>
                   <dt className="text-hint">You said</dt>
                   <dd className="font-semibold tabular-nums">{pct(m.selfBp)}</dd>
@@ -51,6 +48,10 @@ export default async function FeedbackPage({ params }: { params: Promise<{ id: s
                 <div>
                   <dt className="text-hint">Teammates said ({m.peerCount})</dt>
                   <dd className="font-semibold tabular-nums">{pct(m.peerAvgBp)}</dd>
+                </div>
+                <div>
+                  <dt className="text-hint">Gap</dt>
+                  <dd className="font-semibold tabular-nums">{gap(m.gapBp)}</dd>
                 </div>
               </dl>
               {!anonymous && m.from.length > 0 && (
