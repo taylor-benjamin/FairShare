@@ -103,3 +103,7 @@ Choices made where the build spec or the Milestone 1/2 documents were silent, am
 ## Hours next to ratings (Nov 2026)
 
 54. **The instructor's team Overview compares hours with contribution ratings.** "Confirmed hours" and "Contribution ratings" sit side by side in the same student order and on one shared percent scale, so a student's share of team hours lines up with how they rated themselves and how teammates rated them. Self and Peers are averaged across milestones, and a missing rating is skipped rather than counted as 0. Hours aren't tied to a milestone, so this view compares totals rather than one milestone at a time; per-milestone ratings stay on the Ratings tab.
+
+## Read limits (Nov 2026)
+
+55. **Task lookups are indexed (migration 0007).** All D1 databases on the account share one free daily read limit, so an expensive demo query can take the real site down. Checking whether a task has logged work scanned `contributions`, and finding a student's tasks scanned `tasks`; `idx_contributions_task` and `idx_tasks_user` turn both into key lookups. Demo cleanup also deletes by account ID and stops early when no copy has expired.
