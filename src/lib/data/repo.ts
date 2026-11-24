@@ -311,11 +311,14 @@ export async function deleteDraftTeams(projectId: number): Promise<void> {
 // ── Demo workspaces (demo mode only) ─────────────────────────────────────────
 
 const DEMO_ACCOUNT = "email LIKE '%+%@fairshare.demo'";
-const demoSuffix = "substr(email, instr(email, '+'))";
 
-/** Deletes whole demo copies, children first. `suffixes` selects the "+workspace@fairshare.demo" endings to remove. */
-function demoDeleteStatements(suffixes: string, params: unknown[]) {
-  const accounts = `SELECT user_id FROM users WHERE ${DEMO_ACCOUNT} AND ${demoSuffix} IN (${suffixes})`;
+/**
+ * Deletes whole demo copies, children first. Takes the accounts' IDs so each statement looks rows up by key;
+ * matching on the email suffix inside a subquery compares every user with every user and uses up D1's read limit.
+ */
+function demoDeleteStatements(accountIds: number[]) {
+  const params = [JSON.stringify(accountIds)];
+  const accounts = "SELECT value FROM json_each(?)";
   const courseIds = `SELECT course_id FROM courses WHERE instructor_id IN (${accounts})`;
   const projectIds = `SELECT project_id FROM projects WHERE course_id IN (${courseIds})`;
   const teamIds = `SELECT team_id FROM teams WHERE project_id IN (${projectIds})`;
@@ -325,7 +328,7 @@ function demoDeleteStatements(suffixes: string, params: unknown[]) {
     stmt(`DELETE FROM projects WHERE course_id IN (${courseIds})`, ...params),
     stmt(`DELETE FROM courses WHERE instructor_id IN (${accounts})`, ...params),
     stmt(`DELETE FROM sessions WHERE user_id IN (${accounts})`, ...params),
-    stmt(`DELETE FROM users WHERE ${DEMO_ACCOUNT} AND ${demoSuffix} IN (${suffixes})`, ...params),
+    stmt(`DELETE FROM users WHERE ${DEMO_ACCOUNT} AND user_id IN (${accounts})`, ...params),
   ];
 }
 
@@ -349,9 +352,19 @@ export const demoWorkspaces = {
        WHERE u.email LIKE ? ORDER BY t.team_name, u.first_name, u.last_name`,
       `%+${workspace}@fairshare.demo`,
     ),
-  remove: (workspace: string) => batch(demoDeleteStatements("SELECT ?", [`+${workspace}@fairshare.demo`])),
-  removeOlderThan: (cutoffIso: string) =>
-    batch(demoDeleteStatements(`SELECT ${demoSuffix} FROM users WHERE system_role = 'instructor' AND ${DEMO_ACCOUNT} AND created_date < ?`, [cutoffIso])),
+  remove: async (workspace: string) => {
+    const rows = await all<{ user_id: number }>("SELECT user_id FROM users WHERE email LIKE ?", `%+${workspace}@fairshare.demo`);
+    if (rows.length > 0) await batch(demoDeleteStatements(rows.map((r) => r.user_id)));
+  },
+  /** Runs on every demo login, so it stops after one small read when nothing has expired. */
+  removeOlderThan: async (cutoffIso: string) => {
+    const expired = await all<{ email: string }>(`SELECT email FROM users WHERE system_role = 'instructor' AND ${DEMO_ACCOUNT} AND created_date < ?`, cutoffIso);
+    if (expired.length === 0) return;
+    const suffix = (email: string) => email.slice(email.indexOf("+"));
+    const workspaces = new Set(expired.map((u) => suffix(u.email)));
+    const accounts = await all<{ user_id: number; email: string }>(`SELECT user_id, email FROM users WHERE ${DEMO_ACCOUNT}`);
+    await batch(demoDeleteStatements(accounts.filter((a) => workspaces.has(suffix(a.email))).map((a) => a.user_id)));
+  },
 };
 
 // ── Charters and tasks ───────────────────────────────────────────────────────
